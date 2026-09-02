@@ -1,4 +1,4 @@
-import { Redirect } from 'expo-router';
+import { Link, Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -8,6 +8,28 @@ import { Input } from '@/components/ui/Input';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
+
+function getAuthErrorMessage(error: unknown): string {
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: string }).code)
+      : '';
+
+  switch (code) {
+    case 'auth/invalid-email':
+      return 'E-mail inválido.';
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+    case 'auth/invalid-credential':
+      return 'E-mail ou senha incorretos.';
+    case 'auth/too-many-requests':
+      return 'Muitas tentativas. Aguarde um momento e tente de novo.';
+    case 'auth/network-request-failed':
+      return 'Falha de rede. Verifique sua conexão.';
+    default:
+      return 'Não foi possível entrar. Verifique e-mail e senha.';
+  }
+}
 
 export default function LoginScreen() {
   const { user, loading, signIn, resetPassword } = useAuth();
@@ -32,8 +54,9 @@ export default function LoginScreen() {
     setSubmitting(true);
     try {
       await signIn(email, password);
-    } catch {
-      setError('Não foi possível entrar. Verifique e-mail e senha.');
+      router.replace('/(app)');
+    } catch (err) {
+      setError(getAuthErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +91,7 @@ export default function LoginScreen() {
       <View className="mb-8 gap-2">
         <Text className="font-display text-3xl text-ink">Entrar</Text>
         <Text className="font-sans text-base text-ink-muted">
-          Contas são provisionadas pela administração. Use seu e-mail corporativo.
+          Acesse para abrir a Home e iniciar uma nova análise.
         </Text>
       </View>
 
@@ -98,6 +121,13 @@ export default function LoginScreen() {
             {resetting ? 'Enviando...' : 'Esqueci minha senha'}
           </Text>
         </Pressable>
+      </View>
+
+      <View className="mt-8 flex-row items-center justify-center gap-1">
+        <Text className="font-sans text-ink-muted">Ainda não tem conta?</Text>
+        <Link href="/(auth)/register" className="font-sansSemi text-brand-dark">
+          Criar conta
+        </Link>
       </View>
     </Screen>
   );

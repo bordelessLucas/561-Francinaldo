@@ -1,11 +1,13 @@
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import {
   createContext,
   useCallback,
@@ -17,7 +19,7 @@ import {
 } from 'react';
 
 import { auth, db } from '@/lib/firebase';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, UserRole } from '@/lib/types';
 import { mapUserProfile } from '@/lib/userProfile';
 
 type AuthContextValue = {
@@ -26,6 +28,12 @@ type AuthContextValue = {
   loading: boolean;
   profileError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (params: {
+    name: string;
+    email: string;
+    password: string;
+    role: UserRole;
+  }) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -84,6 +92,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email.trim(), password);
   }, []);
 
+  const signUp = useCallback(
+    async ({
+      name,
+      email,
+      password,
+      role,
+    }: {
+      name: string;
+      email: string;
+      password: string;
+      role: UserRole;
+    }) => {
+      const credential = await createUserWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password,
+      );
+
+      await updateProfile(credential.user, { displayName: name.trim() });
+
+      const now = new Date().toISOString();
+      const profileData: UserProfile = {
+        uid: credential.user.uid,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role,
+        status: 'active',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await setDoc(doc(db, 'users', credential.user.uid), profileData);
+      setProfile(profileData);
+      setProfileError(null);
+    },
+    [],
+  );
+
   const resetPassword = useCallback(async (email: string) => {
     await sendPasswordResetEmail(auth, email.trim());
   }, []);
@@ -106,11 +152,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       profileError,
       signIn,
+      signUp,
       resetPassword,
       logOut,
       refreshProfile,
     }),
-    [user, profile, loading, profileError, signIn, resetPassword, logOut, refreshProfile],
+    [
+      user,
+      profile,
+      loading,
+      profileError,
+      signIn,
+      signUp,
+      resetPassword,
+      logOut,
+      refreshProfile,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

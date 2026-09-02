@@ -32,7 +32,7 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -51,7 +51,9 @@
           "photosPermission": "Permitir acesso à galeria para selecionar imagens de campo.",
           "cameraPermission": "Permitir acesso à câmera para fotografar situações de risco."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

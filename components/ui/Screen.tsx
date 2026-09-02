@@ -8,31 +8,41 @@ type ScreenProps = ViewProps & {
   children: React.ReactNode;
 };
 
-export function Screen({ children, scroll = false, className, ...props }: ScreenProps & { className?: string }) {
+export function Screen({
+  children,
+  scroll = false,
+  className,
+  ...props
+}: ScreenProps & { className?: string }) {
   const content = scroll ? (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      contentContainerClassName="grow px-6 pb-10 pt-4"
-      className="flex-1"
+      contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 16 }}
+      style={{ flex: 1 }}
     >
       {children}
     </ScrollView>
   ) : (
-    <View className={`flex-1 px-6 pb-8 pt-4 ${className ?? ''}`} {...props}>
+    <View
+      className={`flex-1 ${className ?? ''}`}
+      style={{ flex: 1, paddingHorizontal: 24, paddingBottom: 32, paddingTop: 16 }}
+      {...props}
+    >
       {children}
     </View>
   );
 
   return (
-    <View className="flex-1 bg-canvas">
+    <View className="flex-1 bg-canvas" style={{ flex: 1, backgroundColor: '#EEF3F5' }}>
       <LinearGradient
         colors={['#D7EDED', '#EEF3F5', '#F7FAFB']}
         locations={[0, 0.35, 1]}
-        className="absolute inset-0"
         style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
       />
       <StatusBar style="dark" />
-      <SafeAreaView className="flex-1">{content}</SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        {content}
+      </SafeAreaView>
     </View>
   );
 }

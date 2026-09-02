@@ -1,13 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import {
-  initializeAuth,
-  getAuth,
-  getReactNativePersistence,
-  type Auth,
-} from 'firebase/auth';
+import { initializeAuth, getAuth, type Auth, type Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -29,13 +25,35 @@ function createFirebaseApp() {
 
 export const app = createFirebaseApp();
 
+function getWebPersistence(): Persistence {
+  // Web Auth export — not present in the RN typings used by Metro.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const authModule = require('firebase/auth') as {
+    browserLocalPersistence: Persistence;
+  };
+  return authModule.browserLocalPersistence;
+}
+
+function getNativePersistence(): Persistence {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const authModule = require('firebase/auth') as {
+    getReactNativePersistence: (storage: typeof AsyncStorage) => Persistence;
+  };
+  return authModule.getReactNativePersistence(AsyncStorage);
+}
+
 function createAuth(): Auth {
   try {
+    if (Platform.OS === 'web') {
+      return initializeAuth(app, {
+        persistence: getWebPersistence(),
+      });
+    }
+
     return initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
+      persistence: getNativePersistence(),
     });
   } catch {
-    // Hot reload / already initialized
     return getAuth(app);
   }
 }

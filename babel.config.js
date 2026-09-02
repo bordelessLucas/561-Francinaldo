@@ -5,5 +5,7 @@ module.exports = function (api) {
       ['babel-preset-expo', { jsxImportSource: 'nativewind' }],
       'nativewind/babel',
     ],
+    // Must be last. Do not add react-native-worklets/plugin separately on SDK 54.
+    plugins: ['react-native-reanimated/plugin'],
   };
 };

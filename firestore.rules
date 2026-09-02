@@ -3,7 +3,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if false;
+      // Bootstrap de conta: o próprio usuário cria/atualiza só o próprio documento.
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
     }
   }
 }

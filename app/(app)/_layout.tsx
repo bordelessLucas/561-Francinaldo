@@ -75,8 +75,8 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
-          tabBarLabel: ({ focused }) => <TabLabel label="Início" focused={focused} />,
+          title: 'Home',
+          tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
         }}
       />
       <Tabs.Screen
