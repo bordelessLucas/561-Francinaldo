@@ -1,37 +1,62 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { ScrollView, View, type ViewProps } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+  type ViewProps,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
 
-type ScreenProps = ViewProps & {
-  scroll?: boolean;
+type ContainerProps = ViewProps & {
   children: React.ReactNode;
+  /** Scroll + teclado para formulários. */
+  scroll?: boolean;
+  /** Evita teclado cobrir inputs. */
+  keyboard?: boolean;
+  className?: string;
 };
 
-export function Screen({
+/** Layout base mobile: safe area, fundo e margens. */
+export function Container({
   children,
   scroll = false,
+  keyboard = false,
   className,
   ...props
-}: ScreenProps & { className?: string }) {
-  const content = scroll ? (
+}: ContainerProps) {
+  const padded = (
+    <View className={`flex-1 px-6 pb-8 pt-4 ${className ?? ''}`} style={{ flex: 1 }} {...props}>
+      {children}
+    </View>
+  );
+
+  const body = scroll ? (
     <ScrollView
       keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
       contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40, paddingTop: 16 }}
       style={{ flex: 1 }}
     >
       {children}
     </ScrollView>
   ) : (
-    <View
-      className={`flex-1 ${className ?? ''}`}
-      style={{ flex: 1, paddingHorizontal: 24, paddingBottom: 32, paddingTop: 16 }}
-      {...props}
+    padded
+  );
+
+  const withKeyboard = keyboard ? (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
     >
-      {children}
-    </View>
+      {body}
+    </KeyboardAvoidingView>
+  ) : (
+    body
   );
 
   return (
@@ -43,7 +68,7 @@ export function Screen({
       />
       <StatusBar style="dark" />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-        {content}
+        {withKeyboard}
       </SafeAreaView>
     </View>
   );

@@ -1,25 +1,27 @@
 import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline';
 
 type ButtonProps = PressableProps & {
   label: string;
   loading?: boolean;
   variant?: ButtonVariant;
+  className?: string;
 };
 
-const variantClasses: Record<ButtonVariant, string> = {
+const containerByVariant: Record<ButtonVariant, string> = {
   primary: 'bg-brand active:bg-brand-dark',
   secondary: 'bg-white border border-line active:bg-canvas',
-  ghost: 'bg-transparent active:bg-brand-mist/60',
+  outline: 'bg-transparent border-2 border-brand active:bg-brand-mist',
 };
 
-const labelClasses: Record<ButtonVariant, string> = {
+const labelByVariant: Record<ButtonVariant, string> = {
   primary: 'text-white',
   secondary: 'text-ink',
-  ghost: 'text-brand-dark',
+  outline: 'text-brand-dark',
 };
 
+/** Botão atômico — sem regra de negócio. */
 export function Button({
   label,
   loading = false,
@@ -27,14 +29,15 @@ export function Button({
   disabled,
   className,
   ...props
-}: ButtonProps & { className?: string }) {
-  const isDisabled = disabled || loading;
+}: ButtonProps) {
+  const isDisabled = Boolean(disabled || loading);
 
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      className={`min-h-14 items-center justify-center rounded-2xl px-5 ${variantClasses[variant]} ${
+      className={`min-h-14 items-center justify-center rounded-2xl px-5 ${containerByVariant[variant]} ${
         isDisabled ? 'opacity-50' : ''
       } ${className ?? ''}`}
       {...props}
@@ -42,7 +45,7 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : '#0E7A42'} />
       ) : (
-        <Text className={`font-sansSemi text-base ${labelClasses[variant]}`}>{label}</Text>
+        <Text className={`font-sansSemi text-base ${labelByVariant[variant]}`}>{label}</Text>
       )}
     </Pressable>
   );

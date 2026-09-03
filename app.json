@@ -1,29 +1,29 @@
 {
   "expo": {
-    "name": "Vistora",
-    "slug": "vistora",
+    "name": "Alpha SST",
+    "slug": "alpha-sst",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "vistora",
+    "scheme": "alphasst",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.francinaldo.vistora",
+      "bundleIdentifier": "com.francinaldo.alphasst",
       "infoPlist": {
-        "NSCameraUsageDescription": "Vistora precisa da câmera para registrar situações de campo.",
-        "NSPhotoLibraryUsageDescription": "Vistora precisa acessar fotos para análise de riscos em campo."
+        "NSCameraUsageDescription": "Alpha SST precisa da câmera para registrar situações de campo.",
+        "NSPhotoLibraryUsageDescription": "Alpha SST precisa acessar fotos para análise de riscos em campo."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#146C6A",
+        "backgroundColor": "#084828",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "package": "com.francinaldo.vistora",
+      "package": "com.francinaldo.alphasst",
       "permissions": [
         "CAMERA",
         "READ_MEDIA_IMAGES"
@@ -40,9 +40,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/brand/alpha-sst-logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#EEF3F5"
+          "backgroundColor": "#000000"
         }
       ],
       [

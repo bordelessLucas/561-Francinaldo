@@ -1,8 +1,9 @@
 import type { AppModule, UserRole, UserStatus } from '@/lib/types';
 
 export const ROLE_LABELS: Record<UserRole, string> = {
-  technician: 'Técnico',
-  manager: 'Gestor',
+  common: 'Comum',
+  subscriber: 'Assinante',
+  admin: 'Administrador',
 };
 
 export const STATUS_LABELS: Record<UserStatus, string> = {
@@ -10,14 +11,10 @@ export const STATUS_LABELS: Record<UserStatus, string> = {
   inactive: 'Inativo',
 };
 
-const SHARED_MODULES: AppModule[] = ['home', 'analysis', 'history', 'profile'];
+const SHARED_MODULES: AppModule[] = ['home', 'analysis', 'library', 'history', 'profile'];
 
-/** Módulos liberados por perfil — base comum; gestores ganharão áreas futuras aqui. */
-export function getModulesForRole(role: UserRole): AppModule[] {
-  if (role === 'manager') {
-    return [...SHARED_MODULES];
-  }
-
+/** Módulos liberados por perfil — base do piloto; Premium/admin ampliam depois. */
+export function getModulesForRole(_role: UserRole): AppModule[] {
   return [...SHARED_MODULES];
 }
 

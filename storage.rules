@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // analyses/{uid}/{analysisId}.jpg — somente o dono
+    match /analyses/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+
+      allow write: if isOwner(userId)
+        && request.resource.size < 12 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+
+      allow delete: if isOwner(userId);
+    }
+  }
+}

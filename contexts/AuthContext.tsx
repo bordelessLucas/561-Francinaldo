@@ -1,13 +1,4 @@
-import {
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-  signOut,
-  updateProfile,
-  type User,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import {
   createContext,
   useCallback,
@@ -18,9 +9,17 @@ import {
   type ReactNode,
 } from 'react';
 
-import { auth, db } from '@/lib/firebase';
-import type { UserProfile, UserRole } from '@/lib/types';
-import { mapUserProfile } from '@/lib/userProfile';
+import { auth } from '@/lib/firebase';
+import type { UserProfile } from '@/lib/types';
+import {
+  getCurrentUser,
+  registerWithEmail,
+  sendPasswordReset,
+  signInWithEmail,
+  signOutCurrentUser,
+  updateAuthDisplayName,
+} from '@/src/services/auth.service';
+import { createUserProfile, getUserProfile } from '@/src/services/user.service';
 
 type AuthContextValue = {
   user: User | null;
@@ -28,26 +27,13 @@ type AuthContextValue = {
   loading: boolean;
   profileError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (params: {
-    name: string;
-    email: string;
-    password: string;
-    role: UserRole;
-  }) => Promise<void>;
+  signUp: (params: { name: string; email: string; password: string }) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   logOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-async function fetchProfile(uid: string): Promise<UserProfile> {
-  const snap = await getDoc(doc(db, 'users', uid));
-  if (!snap.exists()) {
-    throw new Error('PROFILE_NOT_FOUND');
-  }
-  return mapUserProfile(uid, snap.data());
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -57,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadProfile = useCallback(async (uid: string) => {
     try {
-      const nextProfile = await fetchProfile(uid);
+      const nextProfile = await getUserProfile(uid);
       setProfile(nextProfile);
       setProfileError(null);
     } catch (error) {
@@ -89,59 +75,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email.trim(), password);
+    await signInWithEmail(email, password);
   }, []);
 
-  const signUp = useCallback(
-    async ({
+  const signUp = useCallback(async ({ name, email, password }: { name: string; email: string; password: string }) => {
+    const credential = await registerWithEmail(email, password);
+    await updateAuthDisplayName(credential.user, name);
+
+    const profileData = await createUserProfile({
+      uid: credential.user.uid,
       name,
-      email,
-      password,
-      role,
-    }: {
-      name: string;
-      email: string;
-      password: string;
-      role: UserRole;
-    }) => {
-      const credential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password,
-      );
+      email: credential.user.email ?? email,
+    });
 
-      await updateProfile(credential.user, { displayName: name.trim() });
-
-      const now = new Date().toISOString();
-      const profileData: UserProfile = {
-        uid: credential.user.uid,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        role,
-        status: 'active',
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await setDoc(doc(db, 'users', credential.user.uid), profileData);
-      setProfile(profileData);
-      setProfileError(null);
-    },
-    [],
-  );
+    setProfile(profileData);
+    setProfileError(null);
+  }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    await sendPasswordResetEmail(auth, email.trim());
+    await sendPasswordReset(email);
   }, []);
 
   const logOut = useCallback(async () => {
-    await signOut(auth);
+    await signOutCurrentUser();
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (!auth.currentUser) return;
+    const current = getCurrentUser();
+    if (!current) return;
     setLoading(true);
-    await loadProfile(auth.currentUser.uid);
+    await loadProfile(current.uid);
     setLoading(false);
   }, [loadProfile]);
 
@@ -157,17 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logOut,
       refreshProfile,
     }),
-    [
-      user,
-      profile,
-      loading,
-      profileError,
-      signIn,
-      signUp,
-      resetPassword,
-      logOut,
-      refreshProfile,
-    ],
+    [user, profile, loading, profileError, signIn, signUp, resetPassword, logOut, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
