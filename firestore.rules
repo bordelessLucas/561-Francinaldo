@@ -29,6 +29,10 @@ service cloud.firestore {
       return status in ['active', 'inactive'];
     }
 
+    function isValidAnalysisStatus(status) {
+      return status in ['pending', 'uploaded', 'analyzing', 'done', 'failed'];
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
 
@@ -57,7 +61,7 @@ service cloud.firestore {
 
       allow create: if isSignedIn()
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.status in ['pending', 'uploaded']
+        && isValidAnalysisStatus(request.resource.data.status)
         && request.resource.data.source in ['camera', 'gallery']
         && request.resource.data.keys().hasAll([
           'uid',
@@ -74,7 +78,7 @@ service cloud.firestore {
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.source == resource.data.source
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.status in ['pending', 'uploaded'];
+        && isValidAnalysisStatus(request.resource.data.status);
 
       allow update: if isAdmin();
 

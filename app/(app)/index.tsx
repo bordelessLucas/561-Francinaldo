@@ -1,7 +1,7 @@
 import { router, type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { getFirstName } from '@/lib/access';
+import { getFirstName, getPlanKind } from '@/lib/access';
 import { HomeScreen } from '@/src/screens/HomeScreen';
 
 export default function AppHomeRoute() {
@@ -11,6 +11,7 @@ export default function AppHomeRoute() {
   return (
     <HomeScreen
       userName={userName}
+      planKind={getPlanKind(profile?.role)}
       onStartAnalysis={() => router.push('/(app)/analysis')}
       onOpenHistory={() => router.push('/(app)/history')}
       onOpenProfile={() => router.push('/(app)/profile')}

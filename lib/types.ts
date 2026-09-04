@@ -16,7 +16,39 @@ export type AppModule = 'home' | 'analysis' | 'library' | 'history' | 'profile';
 
 export type AnalysisSource = 'camera' | 'gallery';
 
-export type AnalysisStatus = 'pending' | 'uploaded';
+/** uploaded = Storage (standby); 4A usa pending → analyzing → done|failed */
+export type AnalysisStatus = 'pending' | 'uploaded' | 'analyzing' | 'done' | 'failed';
+
+export type RiskSeverity = 'low' | 'medium' | 'high';
+
+export type AnalysisRisk = {
+  id: string;
+  title: string;
+  description: string;
+  severity: RiskSeverity;
+};
+
+export type AnalysisControl = {
+  riskId: string;
+  measure: string;
+};
+
+export type AnalysisNr = {
+  code: string;
+  title: string;
+  relevance: string;
+};
+
+export type AnalysisAiProvider = 'mock' | 'openai';
+
+export type AnalysisResult = {
+  risks: AnalysisRisk[];
+  controls: AnalysisControl[];
+  nrs: AnalysisNr[];
+  provider: AnalysisAiProvider;
+  model?: string;
+  analyzedAt: string;
+};
 
 export type AnalysisRecord = {
   id: string;
@@ -27,4 +59,7 @@ export type AnalysisRecord = {
   source: AnalysisSource;
   createdAt: string;
   updatedAt: string;
+  result?: AnalysisResult;
+  errorMessage?: string;
+  localOnly?: boolean;
 };

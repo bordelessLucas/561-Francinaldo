@@ -53,9 +53,7 @@ export function RegisterScreen() {
 
       <View className="mb-8 gap-2">
         <Heading>Criar conta</Heading>
-        <Body>
-          Cadastro gratuito e aberto. Sua conta inicia como usuário comum do plano gratuito.
-        </Body>
+        <Body>Cadastro aberto. Você começa no plano Free, com acesso às funções principais.</Body>
       </View>
 
       <View className="gap-4">
@@ -88,8 +86,8 @@ export function RegisterScreen() {
         />
 
         <Caption>
-          Ao continuar, você terá acesso às funcionalidades do plano comum. Assinatura Premium e
-          benefícios extras virão em etapas seguintes.
+          O Premium remove anúncios quando a publicidade estiver ativa. As telas do app são as mesmas
+          nos dois planos.
         </Caption>
 
         {error ? <Caption className="text-signal">{error}</Caption> : null}

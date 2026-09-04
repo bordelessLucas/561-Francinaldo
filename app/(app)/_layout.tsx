@@ -121,6 +121,13 @@ export default function AppLayout() {
           tabBarLabel: ({ focused }) => <TabLabel label="Perfil" focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="plans"
+        options={{
+          href: null,
+          title: 'Planos',
+        }}
+      />
     </Tabs>
   );
 }

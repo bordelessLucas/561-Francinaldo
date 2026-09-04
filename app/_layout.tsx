@@ -19,6 +19,7 @@ import '../global.css';
 
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { PlanPreviewProvider } from '@/contexts/PlanPreviewContext';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -49,18 +50,20 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.canvas },
-          animation: 'fade',
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(app)" />
-        <Stack.Screen name="ui" />
-      </Stack>
+      <PlanPreviewProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.canvas },
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(app)" />
+          <Stack.Screen name="ui" />
+        </Stack>
+      </PlanPreviewProvider>
     </AuthProvider>
   );
 }

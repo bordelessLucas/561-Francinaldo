@@ -5,3 +5,4 @@ export { AnalysisScreen } from '@/src/screens/AnalysisScreen';
 export { LibraryScreen } from '@/src/screens/LibraryScreen';
 export { HistoryScreen } from '@/src/screens/HistoryScreen';
 export { ProfileScreen } from '@/src/screens/ProfileScreen';
+export { PlansScreen } from '@/src/screens/PlansScreen';

@@ -45,13 +45,18 @@
 ---
 
 ## Sprint 4 — Análise com IA (risco + controle + NRs)
-- [ ] Integração com provedor de visão/IA (definir e documentar)  
-- [ ] Envio da imagem para análise  
-- [ ] Retorno estruturado: riscos identificados  
-- [ ] Medidas de controle por risco  
-- [ ] Relacionamento com NRs aplicáveis  
-- [ ] Tela de resultado clara e acionável  
-- [ ] Tratamento de falha / timeout / imagem inválida  
+
+> **4A (atual):** mock GPT + fluxo UI + Firestore — Storage e OpenAI reais em standby.  
+> **4B (depois):** chave GPT + Storage quando o cliente liberar billing.
+
+- [x] Integração com provedor de visão/IA (definir e documentar) — alvo **GPT**; runtime **mock** na 4A  
+- [x] Envio da imagem para análise — local/sessão (sem Storage); mock processa a confirmação  
+- [x] Retorno estruturado: riscos identificados  
+- [x] Medidas de controle por risco  
+- [x] Relacionamento com NRs aplicáveis — heurística no mock; base oficial na Sprint 8  
+- [x] Tela de resultado clara e acionável  
+- [x] Tratamento de falha / timeout / imagem inválida — falha simulável via `EXPO_PUBLIC_AI_FORCE_FAIL`  
+- [ ] **4B:** chamada real OpenAI Vision + upload Storage  
 
 ---
 
@@ -98,9 +103,13 @@
 ---
 
 ## Sprint 10 — Monetização (estrutura)
-- [ ] Flag de plano: comum vs assinante  
-- [ ] Gate de download/materiais Premium  
-- [ ] Preparação para anúncios no plano gratuito (sem obrigar go-live)  
+
+> **10A (atual):** esqueleto UI/UX Premium para validação com o cliente (sem pagamento).  
+> **10B (depois):** Asaas/pagamento real + regras finais de preço/limites.
+
+- [x] Flag de plano: comum vs assinante — helpers + UI de plano / pré-visualização  
+- [x] Gate de download/materiais Premium — gates visuais na Biblioteca (sem download real)  
+- [ ] Preparação para anúncios no plano gratuito (sem obrigar go-live) — só placeholder de copy na 10A  
 - [ ] Preparação para provedor de pagamento (ex.: Asaas) via backend/Functions  
 - [ ] Regras finais de preço/limites após validação com cliente  
 

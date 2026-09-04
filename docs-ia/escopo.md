@@ -51,7 +51,7 @@ App **aberto ao público** (não restrito à empresa do cliente).
 6. **Ordens de Serviço** disponíveis para download/uso externo — modelos a definir.  
 7. Seção de **NRs** com consulta e download de PDF quando disponível.  
 8. **Notificações** apenas para **atualizações de NRs** (com permissão do usuário).  
-9. Monetização paralela: **gratuito (ads)** + **premium (assinatura)** — provedor de pagamento TBD (ex.: Asaas).  
+9. Monetização paralela: **gratuito (ads)** + **premium (assinatura)** — provedor de pagamento TBD (ex.: Asaas). **10A:** esqueleto UI (planos, gates, pré-visualização) para validação; **sem cobrança**.  
 10. Dashboard admin é **informativo** (métricas/gráficos), não painel complexo de liberação de acessos.  
 11. UI prioritária: simples, prática, intuitiva, rápida em campo.  
 12. Marca: **Alpha SST** — logo e paleta oficiais aplicadas no design system.  
@@ -127,7 +127,7 @@ Projeto já em andamento com **Expo (SDK 54) + TypeScript + Firebase (Auth, Fire
 
 | Tema | Atenção |
 |------|---------|
-| Análise de imagem com IA | Requer provedor externo de visão (não nativo do Firebase); definir API, custos e formato de resposta |
+| Análise de imagem com IA | **Alvo:** GPT (visão). **4A:** mock/fixture + contrato JSON no Firestore. **Standby:** Storage upload + chave OpenAI até billing do cliente. Flags: `EXPO_PUBLIC_AI_PROVIDER`, `EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD` |
 | Pagamentos (Asaas etc.) | Webhooks e assinaturas pedem backend/Cloud Functions |
 | Dashboard admin | Preferencialmente web (Expo web ou app separado); métricas via Firestore/Analytics |
 | Push de NRs | Expo Notifications + FCM compatível; origem dos dados de atualização ainda pendente |
