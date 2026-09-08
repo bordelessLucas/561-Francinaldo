@@ -1,5 +1,5 @@
 import { LibraryScreen } from '@/src/screens/LibraryScreen';
 
-export default function LibraryRoute() {
+export default function LibraryIndexRoute() {
   return <LibraryScreen />;
 }

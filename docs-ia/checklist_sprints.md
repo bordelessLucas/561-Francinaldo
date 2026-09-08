@@ -1,12 +1,19 @@
 # Alpha SST — Checklist de Sprints
 
-> Ordem lógica do piloto. Marcar `- [x]` ao concluir. Não antecipar itens futuros sem sprint/escopo aprovado.
+> Ordem lógica do piloto. Marcar `- [x]` ao concluir.  
+> Roadmap: [`roadmap_desbloqueio.md`](roadmap_desbloqueio.md).
+
+### Processo
+
+`plano da sprint → aprovação → implementar → feedback`
+
+### Fase 0 — Validação
+
+- [x] **Fase 0** — validação inicial / go para continuar sprints 5–9 (aprovação do product owner no chat)  
 
 ---
 
 ## Sprint 0 — Fundação técnica
-*(base do app; não recriar o que já estiver estável)*
-
 - [x] App Expo + TypeScript + navegação base  
 - [x] Estilo / design system provisório  
 - [x] Firebase Auth + Firestore + Storage configurados  
@@ -39,79 +46,72 @@
 - [x] Captura pela câmera  
 - [x] Seleção pela galeria  
 - [x] Preview e confirmação da imagem  
-- [x] Upload da imagem para Storage  
+- [x] Upload da imagem para Storage — **código pronto; Storage em standby (billing)**  
 - [x] Registro mínimo da análise (status: pendente / enviada)  
 
 ---
 
 ## Sprint 4 — Análise com IA (risco + controle + NRs)
-
-> **4A (atual):** mock GPT + fluxo UI + Firestore — Storage e OpenAI reais em standby.  
-> **4B (depois):** chave GPT + Storage quando o cliente liberar billing.
-
-- [x] Integração com provedor de visão/IA (definir e documentar) — alvo **GPT**; runtime **mock** na 4A  
-- [x] Envio da imagem para análise — local/sessão (sem Storage); mock processa a confirmação  
+- [x] Integração com provedor de visão/IA (definir e documentar) — alvo **GPT**; runtime **mock**  
+- [x] Envio da imagem para análise — local/sessão (sem Storage)  
 - [x] Retorno estruturado: riscos identificados  
 - [x] Medidas de controle por risco  
-- [x] Relacionamento com NRs aplicáveis — heurística no mock; base oficial na Sprint 8  
+- [x] Relacionamento com NRs aplicáveis — heurística no mock  
 - [x] Tela de resultado clara e acionável  
-- [x] Tratamento de falha / timeout / imagem inválida — falha simulável via `EXPO_PUBLIC_AI_FORCE_FAIL`  
+- [x] Tratamento de falha / timeout / imagem inválida  
 - [ ] **4B:** chamada real OpenAI Vision + upload Storage  
 
 ---
 
 ## Sprint 5 — Histórico de análises
-- [ ] Lista de análises do usuário  
-- [ ] Detalhe de uma análise (imagem + resultados)  
-- [ ] Estado vazio real (sem mocks permanentes)  
+- [x] **5A** Lista de análises do usuário (Firestore)  
+- [x] **5A** Detalhe com resultados (riscos / controles / NRs; sem exigir imagem)  
+- [x] **5A** Estado vazio / loading / erro reais  
+- [ ] **5B** Detalhe com imagem persistente (`imageUrl`)  
 - [ ] Regras de acesso conforme perfil (comum / assinante), se houver limite  
 
 ---
 
 ## Sprint 6 — Biblioteca SST (estrutura)
-- [ ] Área Biblioteca com categorias: Checklists, OS, NRs, Planilhas  
-- [ ] Listagem e organização de documentos  
-- [ ] Visualização in-app quando o formato permitir  
-- [ ] Download / compartilhamento para uso externo  
+- [x] **6A** Área Biblioteca com categorias: Checklists, OS, NRs, Planilhas  
+- [x] **6A** Listagem e organização de documentos (metadados / catálogo local)  
+- [ ] **6B** Visualização in-app de arquivos quando o formato permitir  
+- [ ] **6B** Download / compartilhamento para uso externo  
 - [ ] Controle básico free vs conteúdo Premium (flags; regras finais com cliente)  
 
 ---
 
 ## Sprint 7 — Checklists e Ordens de Serviço
-- [ ] Seção Checklists (estrutura por área/equipamento/atividade)  
-- [ ] Conteúdo inicial conforme lista do cliente (quando disponível)  
-- [ ] Modelos de Ordens de Serviço para download  
-- [ ] Categorias/modelos alinhados ao padrão do cliente  
+- [x] Seção Checklists (estrutura por área/equipamento/atividade) — catálogo  
+- [x] Conteúdo inicial de exemplo (substituir pela lista do cliente quando disponível)  
+- [x] Modelos de Ordens de Serviço (metadados; download depois)  
+- [ ] Categorias/modelos alinhados ao padrão definitivo do cliente  
 
 ---
 
 ## Sprint 8 — Normas Regulamentadoras (NRs)
-- [ ] Seção de consulta de NRs  
-- [ ] Download de PDF quando disponível  
-- [ ] Vínculo das NRs com resultados da análise de IA  
-- [ ] Base de conteúdo inicial (fonte a confirmar com cliente)  
+- [x] Seção de consulta de NRs (catálogo + detalhe)  
+- [ ] Download de PDF quando disponível (Storage)  
+- [x] Vínculo das NRs com resultados da análise de IA — via resultado da análise + catálogo  
+- [ ] Base de conteúdo oficial (fonte a confirmar com cliente)  
 
 ---
 
 ## Sprint 9 — Notificações de atualização de NRs
-- [ ] Permissão de push no dispositivo  
-- [ ] Cadastro do device / usuário para push  
-- [ ] Disparo quando NR for atualizada  
-- [ ] Conteúdo da notificação: norma + informação da atualização  
-- [ ] Escopo limitado a atualizações de NRs (piloto)  
+- [x] Permissão de push no dispositivo  
+- [x] Cadastro do device / usuário para push (`devices`)  
+- [ ] Disparo quando NR for atualizada (fonte/cliente)  
+- [x] Conteúdo / escopo preparado: tópico `nr_updates`  
+- [x] Escopo limitado a atualizações de NRs (piloto)  
 
 ---
 
 ## Sprint 10 — Monetização (estrutura)
-
-> **10A (atual):** esqueleto UI/UX Premium para validação com o cliente (sem pagamento).  
-> **10B (depois):** Asaas/pagamento real + regras finais de preço/limites.
-
-- [x] Flag de plano: comum vs assinante — helpers + UI de plano / pré-visualização  
-- [x] Gate de download/materiais Premium — gates visuais na Biblioteca (sem download real)  
-- [ ] Preparação para anúncios no plano gratuito (sem obrigar go-live) — só placeholder de copy na 10A  
-- [ ] Preparação para provedor de pagamento (ex.: Asaas) via backend/Functions  
-- [ ] Regras finais de preço/limites após validação com cliente  
+- [x] Flag de plano: comum vs assinante — helpers + UI de plano  
+- [x] Gate / diferenciação Premium — tag Free/Premium  
+- [ ] Preparação para anúncios no plano gratuito (sem obrigar go-live)  
+- [ ] **10B** Preparação para provedor de pagamento (ex.: Asaas)  
+- [ ] **10B** Regras finais de preço/limites após validação com cliente  
 
 ---
 
@@ -144,13 +144,13 @@
 
 ---
 
-## Dependências externas (bloqueiam ou condicionam sprints)
+## Dependências externas
 
 | Item | Impacta |
 |------|---------|
-| Logo + paleta | Sprint 2 (parcial) e Sprint 12 |
-| Critérios/formato da IA | Sprint 4 |
-| Lista de checklists / OS / planilhas | Sprints 6–7 |
-| Fonte de atualização das NRs | Sprints 8–9 |
-| Regras free vs Premium + pagamento | Sprint 10 |
+| Billing Firebase Storage | Upload, 5B, 6B, PDFs |
+| Chave OpenAI | Sprint 4B |
+| Lista oficial checklists/OS/planilhas | Sprints 6–7 (refino) |
+| Fonte de atualização das NRs | Sprint 9 (disparo) |
+| Regras free vs Premium + pagamento | Sprint 10B |
 | Contas de loja/Firebase do cliente | Sprint 12 |

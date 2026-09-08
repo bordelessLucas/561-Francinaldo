@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
+import { router, type Href } from 'expo-router';
 
-import { colors } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAiProvider } from '@/lib/featureFlags';
 import type { AnalysisResult, RiskSeverity } from '@/lib/types';
 import { Body, Button, Caption, Container, Heading, Label } from '@/src/components';
 import { runAnalysisWithoutUpload } from '@/src/services/analysis.service';
@@ -15,6 +17,9 @@ const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   medium: 'Média',
   high: 'Alta',
 };
+
+const CARD =
+  'rounded-3xl border border-line bg-surface dark:border-line-dark dark:bg-surface-dark';
 
 function getCaptureErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -58,11 +63,14 @@ function getCaptureErrorMessage(error: unknown): string {
  */
 export function AnalysisScreen() {
   const { user } = useAuth();
+  const { colors } = useAppTheme();
+  const isMockAi = getAiProvider() === 'mock';
   const [step, setStep] = useState<Step>('idle');
   const [picked, setPicked] = useState<PickedImage | null>(null);
   const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   async function handlePick(from: 'camera' | 'gallery') {
     if (!user) {
@@ -78,6 +86,7 @@ export function AnalysisScreen() {
       setPicked(next);
       setStep('preview');
       setResult(null);
+      setSavedId(null);
     } catch (err) {
       setError(getCaptureErrorMessage(err));
     } finally {
@@ -90,6 +99,7 @@ export function AnalysisScreen() {
     setPicked(null);
     setStep('idle');
     setResult(null);
+    setSavedId(null);
   }
 
   async function handleConfirm() {
@@ -107,6 +117,7 @@ export function AnalysisScreen() {
         source: picked.source,
       });
       setResult(record.result ?? null);
+      setSavedId(record.id);
       setStep('result');
     } catch (err) {
       setError(getCaptureErrorMessage(err));
@@ -126,6 +137,7 @@ export function AnalysisScreen() {
   function handleNewAnalysis() {
     setPicked(null);
     setResult(null);
+    setSavedId(null);
     setError(null);
     setStep('idle');
   }
@@ -142,7 +154,7 @@ export function AnalysisScreen() {
 
       {step === 'idle' ? (
         <View className="gap-4">
-          <View className="rounded-3xl border border-line bg-white px-5 py-5">
+          <View className={`px-5 py-5 ${CARD}`}>
             <Label>Registrar situação</Label>
             <Caption className="mt-2">
               Use a câmera no local ou escolha uma foto já salva na galeria.
@@ -167,10 +179,10 @@ export function AnalysisScreen() {
 
       {step === 'preview' && picked ? (
         <View className="gap-4">
-          <View className="overflow-hidden rounded-3xl border border-line bg-white">
+          <View className={`overflow-hidden ${CARD}`}>
             <Image
               source={{ uri: picked.localUri }}
-              className="h-72 w-full bg-canvas"
+              className="h-72 w-full bg-canvas dark:bg-canvas-dark"
               resizeMode="cover"
               accessibilityLabel="Pré-visualização da situação capturada"
             />
@@ -189,7 +201,7 @@ export function AnalysisScreen() {
       ) : null}
 
       {step === 'analyzing' ? (
-        <View className="items-center rounded-3xl border border-line bg-white px-5 py-10">
+        <View className={`items-center px-5 py-10 ${CARD}`}>
           <ActivityIndicator size="large" color={colors.brand} />
           <Label className="mt-5">Analisando…</Label>
           <Caption className="mt-2 text-center">
@@ -200,16 +212,28 @@ export function AnalysisScreen() {
 
       {step === 'result' && result ? (
         <View className="gap-4">
+          {isMockAi ? (
+            <View className="rounded-2xl bg-brand-mist px-4 py-3 dark:bg-brand-mist-dark">
+              <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">
+                Demonstração — resultado simulado
+              </Caption>
+              <Caption className="mt-1">
+                A análise assistida real será ativada quando a IA estiver configurada. O registro já
+                foi salvo no histórico.
+              </Caption>
+            </View>
+          ) : null}
+
           {picked ? (
             <Image
               source={{ uri: picked.localUri }}
-              className="h-40 w-full rounded-3xl bg-canvas"
+              className="h-40 w-full rounded-3xl bg-canvas dark:bg-canvas-dark"
               resizeMode="cover"
               accessibilityLabel="Situação analisada"
             />
           ) : null}
 
-          <View className="rounded-3xl border border-line bg-white px-5 py-5">
+          <View className={`px-5 py-5 ${CARD}`}>
             <Label>Riscos identificados</Label>
             <View className="mt-4 gap-4">
               {result.risks.map((risk) => (
@@ -223,7 +247,7 @@ export function AnalysisScreen() {
             </View>
           </View>
 
-          <View className="rounded-3xl border border-line bg-white px-5 py-5">
+          <View className={`px-5 py-5 ${CARD}`}>
             <Label>Medidas de controle</Label>
             <View className="mt-4 gap-3">
               {result.controls.map((control, index) => {
@@ -231,7 +255,9 @@ export function AnalysisScreen() {
                   result.risks.find((r) => r.id === control.riskId)?.title ?? control.riskId;
                 return (
                   <View key={`${control.riskId}-${index}`} className="gap-1">
-                    <Caption className="font-sansSemi text-brand-dark">{riskTitle}</Caption>
+                    <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">
+                      {riskTitle}
+                    </Caption>
                     <Body>{control.measure}</Body>
                   </View>
                 );
@@ -239,7 +265,7 @@ export function AnalysisScreen() {
             </View>
           </View>
 
-          <View className="rounded-3xl border border-line bg-white px-5 py-5">
+          <View className={`px-5 py-5 ${CARD}`}>
             <Label>NRs relacionadas</Label>
             <View className="mt-4 gap-3">
               {result.nrs.map((nr) => (
@@ -253,13 +279,24 @@ export function AnalysisScreen() {
             </View>
           </View>
 
-          <Button label="Nova análise" onPress={handleNewAnalysis} className="mb-2" />
+          {savedId ? (
+            <Button
+              label="Ver no histórico"
+              onPress={() => router.push(`/(app)/history/${savedId}` as Href)}
+            />
+          ) : null}
+          <Button
+            label="Nova análise"
+            variant="outline"
+            onPress={handleNewAnalysis}
+            className="mb-2"
+          />
         </View>
       ) : null}
 
       {step === 'error' ? (
         <View className="gap-4">
-          <View className="rounded-3xl bg-signal-soft px-5 py-5">
+          <View className="rounded-3xl bg-signal-soft px-5 py-5 dark:bg-signal-soft-dark">
             <Label>Não foi possível analisar</Label>
             <Body className="mt-2">{error ?? 'Tente novamente.'}</Body>
           </View>
@@ -269,8 +306,8 @@ export function AnalysisScreen() {
       ) : null}
 
       {error && step !== 'error' ? (
-        <View className="mt-5 rounded-2xl bg-signal-soft px-4 py-3">
-          <Caption className="text-ink-soft">{error}</Caption>
+        <View className="mt-5 rounded-2xl bg-signal-soft px-4 py-3 dark:bg-signal-soft-dark">
+          <Caption className="text-ink-soft dark:text-ink-inverse">{error}</Caption>
         </View>
       ) : null}
     </Container>

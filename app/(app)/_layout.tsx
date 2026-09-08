@@ -1,48 +1,83 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
 import { Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InactiveAccess } from '@/components/access/InactiveAccess';
 import { ProfileIssue } from '@/components/access/ProfileIssue';
-import { colors } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingState } from '@/src/components';
 
 function TabIcon({
   name,
   focused,
-  emphasized = false,
+  color,
 }: {
   name: keyof typeof Ionicons.glyphMap;
   focused: boolean;
-  emphasized?: boolean;
-}) {
-  const color = focused ? colors.brandDark : emphasized ? colors.brand : colors.inkMuted;
-  return <Ionicons name={name} size={emphasized ? 24 : 22} color={color} />;
-}
-
-function TabLabel({
-  label,
-  focused,
-  emphasized = false,
-}: {
-  label: string;
-  focused: boolean;
-  emphasized?: boolean;
+  color: string;
 }) {
   return (
+    <View className="items-center pt-1">
+      <Ionicons name={name} size={22} color={color} />
+      {focused ? (
+        <View
+          style={{
+            marginTop: 4,
+            height: 3,
+            width: 16,
+            borderRadius: 999,
+            backgroundColor: color,
+          }}
+        />
+      ) : (
+        <View style={{ marginTop: 4, height: 3, width: 16 }} />
+      )}
+    </View>
+  );
+}
+
+function TabLabel({ label, focused, color }: { label: string; focused: boolean; color: string }) {
+  return (
     <Text
-      className={`mt-0.5 font-sansMedium text-xs ${
-        focused ? 'text-brand-dark' : emphasized ? 'text-brand' : 'text-ink-muted'
-      }`}
+      style={{ color, marginTop: 2 }}
+      className={`font-sansMedium text-[11px] ${focused ? '' : ''}`}
     >
       {label}
     </Text>
   );
 }
 
+function AnalysisTabIcon({ focused, brand, brandDark }: { focused: boolean; brand: string; brandDark: string }) {
+  return (
+    <View
+      style={{
+        marginTop: -22,
+        height: 58,
+        width: 58,
+        borderRadius: 29,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: focused ? brandDark : brand,
+        borderWidth: 4,
+        borderColor: focused ? brand : brandDark,
+        shadowColor: '#000',
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+      }}
+    >
+      <Ionicons name="camera" size={26} color="#FFFFFF" />
+    </View>
+  );
+}
+
 export default function AppLayout() {
   const { user, profile, loading, profileError } = useAuth();
+  const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return <LoadingState message="Carregando sua sessão..." />;
@@ -62,38 +97,42 @@ export default function AppLayout() {
     return <InactiveAccess />;
   }
 
+  const active = colors.brand;
+  const inactive = colors.tabInactive;
+  const tabBarHeight = 64 + Math.max(insets.bottom, 8);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarActiveTintColor: active,
+        tabBarInactiveTintColor: inactive,
         tabBarStyle: {
-          backgroundColor: colors.white,
+          backgroundColor: colors.tabBar,
           borderTopColor: colors.line,
-          height: 72,
-          paddingTop: 8,
-          paddingBottom: 10,
+          borderTopWidth: 1,
+          height: tabBarHeight,
+          paddingTop: 6,
+          paddingBottom: Math.max(insets.bottom, 8),
         },
-        tabBarActiveTintColor: colors.brandDark,
-        tabBarInactiveTintColor: colors.inkMuted,
+        tabBarLabelStyle: {
+          fontSize: 11,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ focused }) => <TabIcon name="home-outline" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="analysis"
-        options={{
-          title: 'Análise',
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="camera-outline" focused={focused} emphasized />
+          title: 'Início',
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'home' : 'home-outline'}
+              focused={focused}
+              color={String(color)}
+            />
           ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label="Análise" focused={focused} emphasized />
+          tabBarLabel: ({ focused, color }) => (
+            <TabLabel label="Início" focused={focused} color={String(color)} />
           ),
         }}
       />
@@ -101,24 +140,64 @@ export default function AppLayout() {
         name="library"
         options={{
           title: 'Biblioteca',
-          tabBarIcon: ({ focused }) => <TabIcon name="folder-outline" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Biblioteca" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'folder' : 'folder-outline'}
+              focused={focused}
+              color={String(color)}
+            />
+          ),
+          tabBarLabel: ({ focused, color }) => (
+            <TabLabel label="Biblioteca" focused={focused} color={String(color)} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="analysis"
+        options={{
+          title: 'Análise',
+          tabBarIcon: ({ focused }) => (
+            <AnalysisTabIcon focused={focused} brand={colors.brand} brandDark={colors.brandDark} />
+          ),
+          tabBarLabel: ({ focused, color }) => (
+            <TabLabel
+              label="Análise"
+              focused={focused}
+              color={focused ? String(color) : inactive}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="history"
         options={{
           title: 'Histórico',
-          tabBarIcon: ({ focused }) => <TabIcon name="time-outline" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Histórico" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'time' : 'time-outline'}
+              focused={focused}
+              color={String(color)}
+            />
+          ),
+          tabBarLabel: ({ focused, color }) => (
+            <TabLabel label="Histórico" focused={focused} color={String(color)} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ focused }) => <TabIcon name="person-outline" focused={focused} />,
-          tabBarLabel: ({ focused }) => <TabLabel label="Perfil" focused={focused} />,
+          tabBarIcon: ({ focused, color }) => (
+            <TabIcon
+              name={focused ? 'person' : 'person-outline'}
+              focused={focused}
+              color={String(color)}
+            />
+          ),
+          tabBarLabel: ({ focused, color }) => (
+            <TabLabel label="Perfil" focused={focused} color={String(color)} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -126,6 +205,20 @@ export default function AppLayout() {
         options={{
           href: null,
           title: 'Planos',
+        }}
+      />
+      <Tabs.Screen
+        name="nr-alerts"
+        options={{
+          href: null,
+          title: 'Avisos de NRs',
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          href: null,
+          title: 'Configurações',
         }}
       />
     </Tabs>

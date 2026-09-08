@@ -3,12 +3,10 @@ import { router, type Href } from 'expo-router';
 
 import { PlanTag } from '@/components/ui/PlanTag';
 import { usePlanPreview } from '@/contexts/PlanPreviewContext';
-import { colors } from '@/constants/theme';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { getPlanKind, getStatusLabel, isPremiumRole } from '@/lib/access';
 import type { UserProfile } from '@/lib/types';
 import { Body, Button, Caption, Container, Heading, Label } from '@/src/components';
-
-const PLANS_HREF = '/(app)/plans' as Href;
 
 type ProfileScreenProps = {
   profile: UserProfile | null;
@@ -32,6 +30,7 @@ export function ProfileScreen({
   nameFallback,
   onLogout,
 }: ProfileScreenProps) {
+  const { colors } = useAppTheme();
   const { demoAsPremium, setDemoAsPremium, isRealPremium, effectiveIsPremium } = usePlanPreview();
   const planKind = effectiveIsPremium && !isRealPremium ? 'premium' : getPlanKind(profile?.role);
   const realPremium = isPremiumRole(profile?.role);
@@ -46,36 +45,45 @@ export function ProfileScreen({
         <PlanTag plan={planKind} />
       </View>
 
-      <View className="mb-4 rounded-3xl border border-line bg-white px-5 py-5">
+      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
         <ProfileField label="Nome" value={profile?.name || nameFallback || '—'} />
-        <View className="my-4 h-px bg-line" />
+        <View className="my-4 h-px bg-line dark:bg-line-dark" />
         <ProfileField label="E-mail" value={profile?.email || emailFallback || '—'} />
-        <View className="my-4 h-px bg-line" />
+        <View className="my-4 h-px bg-line dark:bg-line-dark" />
         <ProfileField label="Status" value={getStatusLabel(profile?.status)} />
       </View>
 
-      <View className="mb-4 rounded-3xl border border-line bg-white px-5 py-5">
+      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
         <Caption>Plano</Caption>
         <View className="mt-3 flex-row items-center gap-3">
           <PlanTag plan={planKind} />
-          <Body className="flex-1 text-ink-muted">
+          <Body className="flex-1 text-ink-muted dark:text-ink-muted-inverse">
             {realPremium
               ? 'Experiência sem anúncios quando a publicidade estiver ativa.'
               : 'Mesmas telas do Premium. Anúncios poderão aparecer no plano Free no futuro.'}
           </Body>
         </View>
+      </View>
+
+      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+        <Caption>App</Caption>
+        <Body className="mt-2 text-ink-muted dark:text-ink-muted-inverse">
+          Tema, avisos de NRs, planos e informações do aplicativo.
+        </Body>
         <Button
-          label={realPremium ? 'Detalhes do plano' : 'Conhecer Premium'}
+          label="Configurações"
           variant="outline"
-          onPress={() => router.push(PLANS_HREF)}
-          className="mt-5"
+          onPress={() => router.push('/(app)/settings' as Href)}
+          className="mt-4"
         />
       </View>
 
       {__DEV__ && !isRealPremium ? (
-        <View className="mb-4 rounded-3xl border border-dashed border-line bg-white px-5 py-4">
+        <View className="mb-4 rounded-3xl border border-dashed border-line bg-surface px-5 py-4 dark:border-line-dark dark:bg-surface-dark">
           <View className="flex-row items-center justify-between gap-3">
-            <Caption className="flex-1">Dev: pré-visualizar tag Premium</Caption>
+            <Caption className="flex-1">
+              Dev: prévia visual da tag Premium (não muda funções)
+            </Caption>
             <Switch
               value={demoAsPremium}
               onValueChange={setDemoAsPremium}

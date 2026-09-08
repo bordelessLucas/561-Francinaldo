@@ -53,7 +53,7 @@ export function PlansScreen() {
       </View>
 
       <View className="gap-4">
-        <View className="rounded-3xl border border-line bg-white px-5 py-5">
+        <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
           <Label>Free</Label>
           <Caption className="mt-1">Acesso completo às funções principais</Caption>
           <View className="mt-4 gap-2">
@@ -63,7 +63,7 @@ export function PlansScreen() {
           </View>
         </View>
 
-        <View className="rounded-3xl border-2 border-brand bg-white px-5 py-5">
+        <View className="rounded-3xl border-2 border-brand bg-surface px-5 py-5 dark:bg-surface-dark">
           <Label>Premium</Label>
           <Caption className="mt-1">Mesma experiência, sem anúncios</Caption>
           <View className="mt-4 gap-2">
@@ -73,12 +73,15 @@ export function PlansScreen() {
           </View>
 
           {realPremium ? (
-            <View className="mt-5 rounded-2xl bg-brand-mist px-4 py-3">
-              <Caption className="text-brand-dark">Você já está no Premium.</Caption>
+            <View className="mt-5 rounded-2xl bg-brand-mist px-4 py-3 dark:bg-brand-mist-dark">
+              <Caption className="text-brand-dark dark:text-brand-accent">
+                Você já está no Premium.
+              </Caption>
             </View>
           ) : (
             <Button
-              label="Quero o Premium"
+              label="Ver diferenças"
+              variant="outline"
               onPress={() => setCheckoutNotice(true)}
               className="mt-5"
             />
@@ -88,10 +91,10 @@ export function PlansScreen() {
 
       {checkoutNotice ? (
         <View className="mt-5 rounded-3xl bg-brand-black px-5 py-5">
-          <Label className="text-white">Em breve</Label>
+          <Label className="text-white">Assinatura em breve</Label>
           <Body className="mt-2 text-white/75">
-            A assinatura será liberada em seguida, com o meio de pagamento definido pela Alpha SST.
-            Por enquanto você já pode usar o app normalmente no plano Free.
+            Ainda não há checkout. Quando a Alpha SST liberar o pagamento, o Premium remove anúncios.
+            Até lá, use o app normalmente no plano Free.
           </Body>
           <Button
             label="Entendi"

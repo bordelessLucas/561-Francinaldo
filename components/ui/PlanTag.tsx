@@ -7,17 +7,17 @@ type PlanTagProps = {
 const STYLES = {
   free: {
     label: 'Free',
-    box: 'bg-canvas border border-line',
-    text: 'text-ink-muted',
+    box: 'bg-canvas border border-line dark:bg-canvas-dark dark:border-line-dark',
+    text: 'text-ink-muted dark:text-ink-muted-inverse',
   },
   premium: {
     label: 'Premium',
-    box: 'bg-brand-mist',
-    text: 'text-brand-dark',
+    box: 'bg-brand-mist dark:bg-brand-mist-dark',
+    text: 'text-brand-dark dark:text-brand-accent',
   },
   admin: {
     label: 'Admin',
-    box: 'bg-ink',
+    box: 'bg-ink dark:bg-brand-black',
     text: 'text-white',
   },
 } as const;

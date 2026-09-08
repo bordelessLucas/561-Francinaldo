@@ -57,7 +57,10 @@ App **aberto ao público** (não restrito à empresa do cliente).
 12. Marca: **Alpha SST** — logo e paleta oficiais aplicadas no design system.  
 13. Dados/infra vinculados às contas do cliente sempre que possível.  
 14. Arquitetura deve **prever** premium, ads e expansão da biblioteca **sem antecipar** o que não estiver na sprint aprovada.  
-15. Não assumir funcionalidades não confirmadas; priorizar o escopo confirmado mais recente.
+15. Não assumir funcionalidades não confirmadas; priorizar o escopo confirmado mais recente.  
+16. **Desenvolvimento sem Storage/OpenAI:** enquanto billing Storage e chave GPT não chegarem, avançar só fatias independentes (histórico textual, catálogo Biblioteca, UI Premium, admin shell). Ver [`roadmap_desbloqueio.md`](roadmap_desbloqueio.md).  
+17. **Aprovação entre sprints:** validar app (Fase 0) → plano da sprint → aprovação explícita → implementar. Feature freeze na Fase 0 até aprovação.  
+18. **Design system** ([`design_system.md`](design_system.md)) é obrigatório em toda entrega de UI.  
 
 ---
 
@@ -116,23 +119,29 @@ Totais de usuários, acessos, acessos/dia, indicadores e gráficos.
 - [ ] Estratégia/plataforma de anúncios  
 - [ ] Origem e mecanismo de atualização das NRs  
 - [ ] Critérios da IA e formato exato do retorno da análise  
+- [ ] Billing Firebase Storage (Get Started / forma de pagamento)  
+- [ ] Chave API OpenAI (ou backend com secret) para Sprint 4B  
+- [ ] **Fase 0** — validação das telas/fluxos atuais (ver roadmap)  
 
 ---
 
 ## Stack de referência (decisão técnica da equipe)
 
-Projeto já em andamento com **Expo (SDK 54) + TypeScript + Firebase (Auth, Firestore, Storage) + NativeWind**.
+Projeto já em andamento com **Expo (SDK 57 — travado)** + TypeScript + Firebase (Auth, Firestore, Storage) + NativeWind.
+
+> **SDK Expo:** manter **sempre 57.x**. Versão pinada: `expo@57.0.21` + `overrides.expo`. Conferir com `npm run check:sdk`. No dispositivo, usar Expo Go compatível com SDK 57 (atualizar o app na loja se aparecer “project is incompatible”).
 
 ### Pontos de atenção arquiteturais
 
 | Tema | Atenção |
 |------|---------|
-| Análise de imagem com IA | **Alvo:** GPT (visão). **4A:** mock/fixture + contrato JSON no Firestore. **Standby:** Storage upload + chave OpenAI até billing do cliente. Flags: `EXPO_PUBLIC_AI_PROVIDER`, `EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD` |
-| Pagamentos (Asaas etc.) | Webhooks e assinaturas pedem backend/Cloud Functions |
-| Dashboard admin | Preferencialmente web (Expo web ou app separado); métricas via Firestore/Analytics |
+| Análise de imagem com IA | **Alvo:** GPT (visão). **4A:** mock + contrato JSON. **4B standby:** Storage + chave OpenAI. Flags: `EXPO_PUBLIC_AI_PROVIDER`, `EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD` |
+| Desenvolvimento contínuo | Sem Storage/OpenAI: Fase 0 → 5A histórico → 6A catálogo → (opcional) 11A. Detalhe: [`roadmap_desbloqueio.md`](roadmap_desbloqueio.md) |
+| Pagamentos (Asaas etc.) | Webhooks e assinaturas pedem backend/Cloud Functions; **10B** após preço/regras |
+| Dashboard admin | Preferencialmente web (Expo web ou app separado); métricas via Firestore/Analytics; **11A** shell sem Storage |
 | Push de NRs | Expo Notifications + FCM compatível; origem dos dados de atualização ainda pendente |
-| Anúncios (gratuito) | AdMob ou similar; política de lojas e UX em campo |
-| PDFs / downloads | Storage + visualização/compartilhamento nativo; controle Premium vs free |
+| Anúncios (gratuito) | AdMob ou similar; política de lojas e UX em campo; Free/Premium mesmas telas (10A) |
+| PDFs / downloads | Storage + visualização/compartilhamento nativo; **6A** só metadados até Storage |
 | Publicação | Contas de loja e Firebase do **cliente** |
 
 ---

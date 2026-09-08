@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
 import { BrandMark } from '@/components/ui/BrandMark';
 import { LoadingState } from '@/components/ui/LoadingState';
@@ -100,10 +100,6 @@ export function RegisterScreen() {
         />
         <Button label="Já tenho conta" variant="secondary" onPress={handleGoLogin} />
       </View>
-
-      <Pressable onPress={handleGoLogin} className="mt-8 items-center py-2">
-        <Caption className="text-brand-dark">Voltar ao login</Caption>
-      </Pressable>
     </Container>
   );
 }

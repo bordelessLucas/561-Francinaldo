@@ -1,8 +1,13 @@
 import {
   collection,
   doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
   setDoc,
   updateDoc,
+  where,
   type DocumentData,
 } from 'firebase/firestore';
 
@@ -30,7 +35,7 @@ function normalizeStatus(value: unknown): AnalysisStatus {
   return 'pending';
 }
 
-function mapAnalysis(id: string, data: DocumentData): AnalysisRecord {
+export function mapAnalysis(id: string, data: DocumentData): AnalysisRecord {
   return {
     id,
     uid: typeof data.uid === 'string' ? data.uid : '',
@@ -44,6 +49,22 @@ function mapAnalysis(id: string, data: DocumentData): AnalysisRecord {
     errorMessage: typeof data.errorMessage === 'string' ? data.errorMessage : undefined,
     localOnly: typeof data.localOnly === 'boolean' ? data.localOnly : undefined,
   };
+}
+
+export async function listAnalysesByUser(uid: string): Promise<AnalysisRecord[]> {
+  const q = query(
+    collection(db, 'analyses'),
+    where('uid', '==', uid),
+    orderBy('createdAt', 'desc'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => mapAnalysis(d.id, d.data()));
+}
+
+export async function getAnalysisById(analysisId: string): Promise<AnalysisRecord | null> {
+  const snap = await getDoc(doc(db, 'analyses', analysisId));
+  if (!snap.exists()) return null;
+  return mapAnalysis(snap.id, snap.data());
 }
 
 export type CreateAnalysisFromImageInput = {

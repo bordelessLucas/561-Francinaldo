@@ -17,13 +17,37 @@ import 'react-native-reanimated';
 
 import '../global.css';
 
-import { colors } from '@/constants/theme';
+import { lightColors } from '@/constants/theme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { PlanPreviewProvider } from '@/contexts/PlanPreviewContext';
+import { ThemeProvider, useAppTheme } from '@/contexts/ThemeContext';
 
 export { ErrorBoundary } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
+
+function RootNavigator() {
+  const { colors } = useAppTheme();
+
+  return (
+    <AuthProvider>
+      <PlanPreviewProvider>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.canvas },
+            animation: 'fade',
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(app)" />
+          <Stack.Screen name="ui" />
+        </Stack>
+      </PlanPreviewProvider>
+    </AuthProvider>
+  );
+}
 
 export default function RootLayout() {
   const [outfitLoaded] = useOutfit({
@@ -45,25 +69,12 @@ export default function RootLayout() {
   }, [loaded]);
 
   if (!loaded) {
-    return <View className="flex-1 bg-canvas" />;
+    return <View className="flex-1" style={{ backgroundColor: lightColors.canvas }} />;
   }
 
   return (
-    <AuthProvider>
-      <PlanPreviewProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.canvas },
-            animation: 'fade',
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(app)" />
-          <Stack.Screen name="ui" />
-        </Stack>
-      </PlanPreviewProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <RootNavigator />
+    </ThemeProvider>
   );
 }

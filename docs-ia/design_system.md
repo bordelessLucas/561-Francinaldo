@@ -49,7 +49,8 @@ Evitar:
 | Hierarquia | CTA principal destacado (ex.: iniciar análise) |
 | Navegação | Clara, previsível (tabs / fluxos curtos) |
 | Feedback | Estados explícitos: loading, vazio, erro, sucesso |
-| Modo | Preferência clara/legível em ambiente externo (luz do dia); superfícies escuras usadas pontualmente com a marca (header de ação, splash) |
+| Modo | **Light / Dark** com preferência em Configurações: Sistema (padrão) · Claro · Escuro (persistido). Tokens em `constants/theme.ts`; resolução em `ThemeContext`. Superfícies de marca (hero preto, splash) permanecem escuras nos dois modos. |
+| Tab bar | Ordem: **Início · Biblioteca · Análise · Histórico · Perfil**. Análise central elevada (câmera). Aba ativa com cor brand + indicador; inativas muted. Configurações acessíveis por **Perfil → Configurações** (sem 6ª tab). |
 
 ---
 
@@ -69,14 +70,15 @@ Amostragem a partir de `assets/brand/alpha-sst-logo.png`:
 | `brand-black` | `#000000` | Fundo da peça de marca |
 | `ink` | `#0A1A12` | Texto principal (verde-preto) |
 | `ink-muted` | `#5A6F62` | Texto secundário |
-| `canvas` | `#F0F5F1` | Fundo do app (claro, subtinta verde) |
-| `canvas-elev` | `#F7FAF8` | Superfície elevada |
+| `canvas` | `#F0F5F1` / dark `#0B1410` | Fundo do app |
+| `canvas-elev` | `#F7FAF8` / dark `#101C16` | Superfície elevada |
+| `surface` | `#FFFFFF` / dark `#15241C` | Cards |
 | `signal` | `#D97706` | Alertas / atenção (fora da logo; contraste funcional) |
-| `signal-soft` | `#FEF3C7` | Fundo de aviso |
-| `line` | `#D0DED5` | Bordas |
-| `white` | `#FFFFFF` | Superfícies |
+| `signal-soft` | `#FEF3C7` / dark `#3D2E12` | Fundo de aviso |
+| `line` | `#D0DED5` / dark `#2A3F34` | Bordas |
+| `white` | `#FFFFFF` | Texto em botões brand / superfícies fixas |
 
-Fonte de verdade no código: `constants/theme.ts` + `tailwind.config.js`.
+Fonte de verdade no código: `constants/theme.ts` (`useAppTheme`) + `tailwind.config.js` (`darkMode: 'media'`).
 
 ---
 

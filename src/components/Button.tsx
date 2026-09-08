@@ -11,14 +11,15 @@ type ButtonProps = PressableProps & {
 
 const containerByVariant: Record<ButtonVariant, string> = {
   primary: 'bg-brand active:bg-brand-dark',
-  secondary: 'bg-white border border-line active:bg-canvas',
-  outline: 'bg-transparent border-2 border-brand active:bg-brand-mist',
+  secondary:
+    'bg-surface border border-line active:bg-canvas dark:bg-surface-dark dark:border-line-dark dark:active:bg-canvas-dark',
+  outline: 'bg-transparent border-2 border-brand active:bg-brand-mist dark:active:bg-brand-mist-dark',
 };
 
 const labelByVariant: Record<ButtonVariant, string> = {
   primary: 'text-white',
-  secondary: 'text-ink',
-  outline: 'text-brand-dark',
+  secondary: 'text-ink dark:text-ink-inverse',
+  outline: 'text-brand-dark dark:text-brand-accent',
 };
 
 /** Botão atômico — sem regra de negócio. */

@@ -1,5 +1,5 @@
 import { HistoryScreen } from '@/src/screens/HistoryScreen';
 
-export default function HistoryRoute() {
+export default function HistoryIndexRoute() {
   return <HistoryScreen />;
 }

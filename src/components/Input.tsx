@@ -25,10 +25,10 @@ export function Input({
 
   return (
     <View className="w-full gap-2">
-      <Text className="font-sansMedium text-sm text-ink-soft">{label}</Text>
+      <Text className="font-sansMedium text-sm text-ink-soft dark:text-ink-muted-inverse">{label}</Text>
       <View
-        className={`min-h-14 flex-row items-center rounded-2xl border bg-white px-3 ${
-          error ? 'border-signal' : 'border-line'
+        className={`min-h-14 flex-row items-center rounded-2xl border bg-surface px-3 dark:bg-surface-dark ${
+          error ? 'border-signal' : 'border-line dark:border-line-dark'
         } ${className ?? ''}`}
       >
         {leftIcon ? (
@@ -37,7 +37,7 @@ export function Input({
         <TextInput
           placeholderTextColor="#8A9AA3"
           secureTextEntry={showSecure}
-          className="flex-1 py-3 font-sans text-base text-ink"
+          className="flex-1 py-3 font-sans text-base text-ink dark:text-ink-inverse"
           {...props}
         />
         {isPassword ? (

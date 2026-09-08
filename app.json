@@ -6,8 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "alphasst",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.francinaldo.alphasst",
@@ -50,6 +49,14 @@
         {
           "photosPermission": "Permitir acesso à galeria para selecionar imagens de campo.",
           "cameraPermission": "Permitir acesso à câmera para fotografar situações de risco."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0E7A42",
+          "defaultChannel": "nr-updates"
         }
       ],
       "expo-font",

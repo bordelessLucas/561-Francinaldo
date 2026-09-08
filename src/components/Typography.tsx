@@ -8,7 +8,10 @@ type TypographyProps = TextProps & {
 /** Títulos de destaque (Home, Login). */
 export function Display({ children, className, ...props }: TypographyProps) {
   return (
-    <Text className={`font-displayBold text-4xl leading-10 text-ink ${className ?? ''}`} {...props}>
+    <Text
+      className={`font-displayBold text-4xl leading-10 text-ink dark:text-ink-inverse ${className ?? ''}`}
+      {...props}
+    >
       {children}
     </Text>
   );
@@ -17,7 +20,10 @@ export function Display({ children, className, ...props }: TypographyProps) {
 /** Header de seção / tela. */
 export function Heading({ children, className, ...props }: TypographyProps) {
   return (
-    <Text className={`font-display text-3xl leading-9 text-ink ${className ?? ''}`} {...props}>
+    <Text
+      className={`font-display text-3xl leading-9 text-ink dark:text-ink-inverse ${className ?? ''}`}
+      {...props}
+    >
       {children}
     </Text>
   );
@@ -27,7 +33,7 @@ export function Heading({ children, className, ...props }: TypographyProps) {
 export function Subheading({ children, className, ...props }: TypographyProps) {
   return (
     <Text
-      className={`font-sansMedium text-base leading-6 text-brand-dark ${className ?? ''}`}
+      className={`font-sansMedium text-base leading-6 text-brand-dark dark:text-brand-accent ${className ?? ''}`}
       {...props}
     >
       {children}
@@ -38,7 +44,10 @@ export function Subheading({ children, className, ...props }: TypographyProps) {
 /** Corpo de texto. */
 export function Body({ children, className, ...props }: TypographyProps) {
   return (
-    <Text className={`font-sans text-base leading-6 text-ink-muted ${className ?? ''}`} {...props}>
+    <Text
+      className={`font-sans text-base leading-6 text-ink-muted dark:text-ink-muted-inverse ${className ?? ''}`}
+      {...props}
+    >
       {children}
     </Text>
   );
@@ -47,7 +56,10 @@ export function Body({ children, className, ...props }: TypographyProps) {
 /** Caption / meta. */
 export function Caption({ children, className, ...props }: TypographyProps) {
   return (
-    <Text className={`font-sans text-sm leading-5 text-ink-muted ${className ?? ''}`} {...props}>
+    <Text
+      className={`font-sans text-sm leading-5 text-ink-muted dark:text-ink-muted-inverse ${className ?? ''}`}
+      {...props}
+    >
       {children}
     </Text>
   );
@@ -56,7 +68,10 @@ export function Caption({ children, className, ...props }: TypographyProps) {
 /** Label de formulário / ênfase. */
 export function Label({ children, className, ...props }: TypographyProps) {
   return (
-    <Text className={`font-sansSemi text-base text-ink ${className ?? ''}`} {...props}>
+    <Text
+      className={`font-sansSemi text-base text-ink dark:text-ink-inverse ${className ?? ''}`}
+      {...props}
+    >
       {children}
     </Text>
   );

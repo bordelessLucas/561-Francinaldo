@@ -1,86 +1,50 @@
-import { useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { router, type Href } from 'expo-router';
 
-import {
-  Body,
-  Button,
-  Caption,
-  Container,
-  Heading,
-  Label,
-} from '@/src/components';
-import {
-  LIBRARY_CATEGORIES,
-  type LibraryCategory,
-} from '@/src/services/mocks/library.mock';
+import { Body, Caption, Container, Heading, Label } from '@/src/components';
+import { LIBRARY_CATALOG } from '@/src/data/library-catalog';
 
 /**
- * Biblioteca SST — mesmas categorias para Free e Premium.
+ * Biblioteca — hub de categorias (Sprints 6A–8).
  */
 export function LibraryScreen() {
-  const [selected, setSelected] = useState<LibraryCategory | null>(null);
-
   return (
     <Container scroll>
       <View className="mb-8 mt-2 gap-2">
         <Heading>Biblioteca</Heading>
-        <Body>Materiais de SST para consulta rápida em campo.</Body>
+        <Body>
+          Catálogo de checklists, OS e NRs em resumo. O arquivo completo para download chega quando o
+          armazenamento estiver ativo.
+        </Body>
       </View>
 
-      <View className="mb-2 gap-3">
-        {LIBRARY_CATEGORIES.map((item) => (
-          <View key={item.id} className="rounded-3xl border border-line bg-white px-5 py-5">
+      <View className="gap-3">
+        {LIBRARY_CATALOG.map((item) => (
+          <Pressable
+            key={item.id}
+            onPress={() => router.push(`/(app)/library/${item.id}` as Href)}
+            className="rounded-3xl border border-line bg-surface px-5 py-5 active:bg-canvas dark:border-line-dark dark:bg-surface-dark dark:active:bg-canvas-dark"
+          >
             <View className="flex-row items-start justify-between gap-2">
               <View className="flex-1">
                 <Label>{item.title}</Label>
                 <Caption className="mt-2">{item.description}</Caption>
               </View>
-              <Caption className="text-brand-dark">{item.documents.length} itens</Caption>
+              <Caption className="text-brand-dark dark:text-brand-accent">
+                {item.documents.length}{' '}
+                {item.documents.length === 1 ? 'resumo' : 'resumos'}
+              </Caption>
             </View>
-            <Button
-              label="Ver materiais"
-              variant="outline"
-              onPress={() => setSelected(item)}
-              className="mt-4 min-h-12"
-            />
-          </View>
+            <Caption className="mt-4 font-sansSemi text-brand-dark dark:text-brand-accent">
+              Abrir →
+            </Caption>
+          </Pressable>
         ))}
       </View>
 
-      <Modal
-        visible={Boolean(selected)}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelected(null)}
-      >
-        <Pressable
-          className="flex-1 justify-end bg-black/40 px-4 pb-10"
-          onPress={() => setSelected(null)}
-        >
-          <Pressable
-            className="max-h-[70%] w-full rounded-3xl bg-white px-5 py-6"
-            onPress={(e) => e.stopPropagation()}
-          >
-            <Label>{selected?.title}</Label>
-            <Caption className="mt-1">{selected?.description}</Caption>
-
-            <View className="mt-5 gap-3">
-              {selected?.documents.map((doc) => (
-                <View key={doc.id} className="rounded-2xl border border-line px-4 py-3">
-                  <Label className="text-base">{doc.title}</Label>
-                  <Caption className="mt-1">{doc.meta}</Caption>
-                </View>
-              ))}
-            </View>
-
-            <Body className="mt-4 text-ink-muted">
-              Visualização e download dos arquivos serão liberados na sequência. Por agora você
-              confere a organização dos materiais.
-            </Body>
-            <Button label="Fechar" variant="secondary" onPress={() => setSelected(null)} className="mt-4" />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <Caption className="mt-6 text-ink-muted dark:text-ink-muted-inverse">
+        Por enquanto você consulta títulos e resumos no app — sem download de PDF.
+      </Caption>
     </Container>
   );
 }

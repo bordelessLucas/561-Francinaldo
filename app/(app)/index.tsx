@@ -14,9 +14,7 @@ export default function AppHomeRoute() {
       planKind={getPlanKind(profile?.role)}
       onStartAnalysis={() => router.push('/(app)/analysis')}
       onOpenHistory={() => router.push('/(app)/history')}
-      onOpenProfile={() => router.push('/(app)/profile')}
       onOpenLibrary={() => router.push('/(app)/library' as Href)}
-      onOpenMenu={() => router.push('/(app)/library' as Href)}
     />
   );
 }

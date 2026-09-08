@@ -6,3 +6,8 @@ export { LibraryScreen } from '@/src/screens/LibraryScreen';
 export { HistoryScreen } from '@/src/screens/HistoryScreen';
 export { ProfileScreen } from '@/src/screens/ProfileScreen';
 export { PlansScreen } from '@/src/screens/PlansScreen';
+export { AnalysisDetailScreen } from '@/src/screens/AnalysisDetailScreen';
+export { LibraryCategoryScreen } from '@/src/screens/LibraryCategoryScreen';
+export { LibraryDocumentScreen } from '@/src/screens/LibraryDocumentScreen';
+export { NrAlertsScreen } from '@/src/screens/NrAlertsScreen';
+export { SettingsScreen } from '@/src/screens/SettingsScreen';

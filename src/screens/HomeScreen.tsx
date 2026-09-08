@@ -9,8 +9,6 @@ type HomeScreenProps = {
   onStartAnalysis?: () => void;
   onOpenLibrary?: () => void;
   onOpenHistory?: () => void;
-  onOpenProfile?: () => void;
-  onOpenMenu?: () => void;
 };
 
 /**
@@ -22,16 +20,10 @@ export function HomeScreen({
   onStartAnalysis = () => {},
   onOpenLibrary = () => {},
   onOpenHistory = () => {},
-  onOpenProfile = () => {},
-  onOpenMenu = () => {},
 }: HomeScreenProps) {
   return (
     <Container scroll>
-      <AppHeader
-        subtitle="Segurança e saúde no trabalho"
-        onPressMenu={onOpenMenu}
-        onPressProfile={onOpenProfile}
-      />
+      <AppHeader subtitle="Segurança e saúde no trabalho" />
 
       <View className="mb-6 flex-row items-center justify-between gap-3">
         <View className="flex-1 gap-1">
@@ -53,19 +45,19 @@ export function HomeScreen({
 
       <Label className="mb-3">Acessos rápidos</Label>
       <View className="mb-6 flex-row gap-3">
-        <View className="flex-1 rounded-3xl border border-line bg-white px-4 py-5">
+        <View className="flex-1 rounded-3xl border border-line bg-surface px-4 py-5 dark:border-line-dark dark:bg-surface-dark">
           <Label>Biblioteca</Label>
-          <Caption className="mt-2">Checklists, OS e NRs</Caption>
+          <Caption className="mt-2">Catálogo SST (resumos)</Caption>
           <Button label="Abrir" variant="outline" onPress={onOpenLibrary} className="mt-4 min-h-12" />
         </View>
-        <View className="flex-1 rounded-3xl border border-line bg-white px-4 py-5">
+        <View className="flex-1 rounded-3xl border border-line bg-surface px-4 py-5 dark:border-line-dark dark:bg-surface-dark">
           <Label>Histórico</Label>
           <Caption className="mt-2">Análises anteriores</Caption>
-          <Button label="Ver" variant="secondary" onPress={onOpenHistory} className="mt-4 min-h-12" />
+          <Button label="Abrir" variant="outline" onPress={onOpenHistory} className="mt-4 min-h-12" />
         </View>
       </View>
 
-      <View className="rounded-3xl border border-line bg-white px-5 py-5">
+      <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
         <Label>Dica de campo</Label>
         <Caption className="mt-2">
           Prefira fotos bem iluminadas, com o risco no centro da imagem. Isso melhora a leitura da
