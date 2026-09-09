@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { router } from 'expo-router';
+import { View } from 'react-native';
+import { type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlanPreview } from '@/contexts/PlanPreviewContext';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import { getPlanLabel, isPremiumRole } from '@/lib/access';
-import { Body, Button, Caption, Container, Heading, Label } from '@/src/components';
+import {
+  BackLink,
+  Body,
+  Button,
+  Caption,
+  Container,
+  Heading,
+  Label,
+  Surface,
+} from '@/src/components';
 
 const FREE_BENEFITS = [
   'Análise de situações em campo',
@@ -26,6 +36,7 @@ const PREMIUM_BENEFITS = [
 export function PlansScreen() {
   const { profile } = useAuth();
   const { effectiveIsPremium } = usePlanPreview();
+  const { colors } = useAppTheme();
   const [checkoutNotice, setCheckoutNotice] = useState(false);
 
   const realPremium = isPremiumRole(profile?.role);
@@ -33,9 +44,7 @@ export function PlansScreen() {
 
   return (
     <Container scroll>
-      <Pressable onPress={() => router.back()} className="mb-4 self-start py-1">
-        <Caption className="font-sansSemi text-brand-dark">Voltar</Caption>
-      </Pressable>
+      <BackLink className="mb-4" fallbackHref={'/(app)/settings' as Href} />
 
       <View className="mb-6 gap-2">
         <Heading>Planos</Heading>
@@ -45,15 +54,15 @@ export function PlansScreen() {
         </Body>
       </View>
 
-      <View className="mb-4 rounded-2xl bg-brand-mist px-4 py-3">
-        <Caption className="text-brand-dark">
+      <Surface tone="accent" className="mb-4" padding>
+        <Caption style={{ color: colors.brandDark }}>
           Plano atual: {planLabel}
           {effectiveIsPremium && !realPremium ? ' (pré-visualização)' : ''}
         </Caption>
-      </View>
+      </Surface>
 
       <View className="gap-4">
-        <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+        <Surface>
           <Label>Free</Label>
           <Caption className="mt-1">Acesso completo às funções principais</Caption>
           <View className="mt-4 gap-2">
@@ -61,9 +70,9 @@ export function PlansScreen() {
               <Caption key={item}>• {item}</Caption>
             ))}
           </View>
-        </View>
+        </Surface>
 
-        <View className="rounded-3xl border-2 border-brand bg-surface px-5 py-5 dark:bg-surface-dark">
+        <Surface style={{ borderWidth: 2, borderColor: colors.brand }}>
           <Label>Premium</Label>
           <Caption className="mt-1">Mesma experiência, sem anúncios</Caption>
           <View className="mt-4 gap-2">
@@ -73,11 +82,9 @@ export function PlansScreen() {
           </View>
 
           {realPremium ? (
-            <View className="mt-5 rounded-2xl bg-brand-mist px-4 py-3 dark:bg-brand-mist-dark">
-              <Caption className="text-brand-dark dark:text-brand-accent">
-                Você já está no Premium.
-              </Caption>
-            </View>
+            <Surface tone="accent" className="mt-5" bordered={false}>
+              <Caption style={{ color: colors.brandDark }}>Você já está no Premium.</Caption>
+            </Surface>
           ) : (
             <Button
               label="Ver diferenças"
@@ -86,13 +93,13 @@ export function PlansScreen() {
               className="mt-5"
             />
           )}
-        </View>
+        </Surface>
       </View>
 
       {checkoutNotice ? (
-        <View className="mt-5 rounded-3xl bg-brand-black px-5 py-5">
-          <Label className="text-white">Assinatura em breve</Label>
-          <Body className="mt-2 text-white/75">
+        <Surface tone="accent" className="mt-5">
+          <Label style={{ color: colors.brandDark }}>Assinatura em breve</Label>
+          <Body className="mt-2">
             Ainda não há checkout. Quando a Alpha SST liberar o pagamento, o Premium remove anúncios.
             Até lá, use o app normalmente no plano Free.
           </Body>
@@ -102,7 +109,7 @@ export function PlansScreen() {
             onPress={() => setCheckoutNotice(false)}
             className="mt-4"
           />
-        </View>
+        </Surface>
       ) : null}
     </Container>
   );

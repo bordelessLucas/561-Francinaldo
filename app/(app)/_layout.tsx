@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Redirect, Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -79,12 +80,18 @@ export default function AppLayout() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/(auth)/login');
+    }
+  }, [loading, user]);
+
   if (loading) {
     return <LoadingState message="Carregando sua sessão..." />;
   }
 
   if (!user) {
-    return <Redirect href="/(auth)/login" />;
+    return <LoadingState message="Redirecionando..." />;
   }
 
   if (profileError || !profile) {

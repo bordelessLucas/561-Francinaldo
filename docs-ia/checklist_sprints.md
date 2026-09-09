@@ -1,7 +1,7 @@
 # Alpha SST — Checklist de Sprints
 
 > Ordem lógica do piloto. Marcar `- [x]` ao concluir.  
-> Roadmap: [`roadmap_desbloqueio.md`](roadmap_desbloqueio.md).
+> Índice: [`README.md`](README.md) · Roadmap: [`roadmap.md`](roadmap.md).
 
 ### Processo
 
@@ -9,14 +9,14 @@
 
 ### Fase 0 — Validação
 
-- [x] **Fase 0** — validação inicial / go para continuar sprints 5–9 (aprovação do product owner no chat)  
+- [x] **Fase 0** — validação inicial / go para continuar o piloto (aprovação do product owner)
 
 ---
 
 ## Sprint 0 — Fundação técnica
 - [x] App Expo + TypeScript + navegação base  
 - [x] Estilo / design system provisório  
-- [x] Firebase Auth + Firestore + Storage configurados  
+- [x] Firebase Auth + Firestore (+ Storage no projeto; **não** usado na análise do piloto)  
 - [x] Ambientes e variáveis de configuração  
 - [x] Estrutura de pastas e documentação `docs-ia/`  
 
@@ -34,10 +34,11 @@
 
 ## Sprint 2 — Shell do app e navegação principal
 - [x] Home com CTA principal de análise  
-- [x] Menu / tabs: Análise, Biblioteca, Perfil (e demais módulos do piloto)  
+- [x] Tabs: Início, Biblioteca, Análise, Histórico, Perfil (+ Configurações / Planos / NRs)  
 - [x] UI simples, poucos cliques, otimizada para campo  
 - [x] Estados de loading / vazio / erro padronizados  
 - [x] Aplicação da marca oficial (logo + paleta Alpha SST)  
+- [x] Tema claro/escuro + tela Configurações  
 
 ---
 
@@ -46,20 +47,20 @@
 - [x] Captura pela câmera  
 - [x] Seleção pela galeria  
 - [x] Preview e confirmação da imagem  
-- [x] Upload da imagem para Storage — **código pronto; Storage em standby (billing)**  
-- [x] Registro mínimo da análise (status: pendente / enviada)  
+- [x] Registro mínimo da análise (status + resultado textual; `localOnly`)  
+- [x] Upload Storage — **código legado existe; fora do fluxo oficial do piloto** (imagem efêmera)
 
 ---
 
 ## Sprint 4 — Análise com IA (risco + controle + NRs)
 - [x] Integração com provedor de visão/IA (definir e documentar) — alvo **GPT**; runtime **mock**  
-- [x] Envio da imagem para análise — local/sessão (sem Storage)  
+- [x] Envio da imagem para análise — local/sessão (**sem Storage**)  
 - [x] Retorno estruturado: riscos identificados  
 - [x] Medidas de controle por risco  
 - [x] Relacionamento com NRs aplicáveis — heurística no mock  
 - [x] Tela de resultado clara e acionável  
 - [x] Tratamento de falha / timeout / imagem inválida  
-- [ ] **4B:** chamada real OpenAI Vision + upload Storage  
+- [x] **4B:** OpenAI Vision **efêmero** (bytes locais → JSON; descartar imagem; **sem** Storage) — adapter + Netlify Function; chave no `.env` / Netlify  
 
 ---
 
@@ -67,7 +68,7 @@
 - [x] **5A** Lista de análises do usuário (Firestore)  
 - [x] **5A** Detalhe com resultados (riscos / controles / NRs; sem exigir imagem)  
 - [x] **5A** Estado vazio / loading / erro reais  
-- [ ] **5B** Detalhe com imagem persistente (`imageUrl`)  
+- [x] **5B** Detalhe com imagem persistente (`imageUrl`) — **cancelada no piloto** (política de imagem efêmera)  
 - [ ] Regras de acesso conforme perfil (comum / assinante), se houver limite  
 
 ---
@@ -75,8 +76,8 @@
 ## Sprint 6 — Biblioteca SST (estrutura)
 - [x] **6A** Área Biblioteca com categorias: Checklists, OS, NRs, Planilhas  
 - [x] **6A** Listagem e organização de documentos (metadados / catálogo local)  
-- [ ] **6B** Visualização in-app de arquivos quando o formato permitir  
-- [ ] **6B** Download / compartilhamento para uso externo  
+- [ ] **6B** Visualização in-app de arquivos — só se cliente pedir PDF (Storage separado da IA)  
+- [ ] **6B** Download / compartilhamento — idem  
 - [ ] Controle básico free vs conteúdo Premium (flags; regras finais com cliente)  
 
 ---
@@ -91,7 +92,7 @@
 
 ## Sprint 8 — Normas Regulamentadoras (NRs)
 - [x] Seção de consulta de NRs (catálogo + detalhe)  
-- [ ] Download de PDF quando disponível (Storage)  
+- [ ] Download de PDF quando disponível (só com decisão de Storage para Biblioteca)  
 - [x] Vínculo das NRs com resultados da análise de IA — via resultado da análise + catálogo  
 - [ ] Base de conteúdo oficial (fonte a confirmar com cliente)  
 
@@ -100,7 +101,7 @@
 ## Sprint 9 — Notificações de atualização de NRs
 - [x] Permissão de push no dispositivo  
 - [x] Cadastro do device / usuário para push (`devices`)  
-- [ ] Disparo quando NR for atualizada (fonte/cliente)  
+- [ ] **9B** Disparo quando NR for atualizada (fonte/cliente)  
 - [x] Conteúdo / escopo preparado: tópico `nr_updates`  
 - [x] Escopo limitado a atualizações de NRs (piloto)  
 
@@ -116,7 +117,7 @@
 ---
 
 ## Sprint 11 — Dashboard administrativo
-- [ ] Acesso restrito ao perfil administrador  
+- [ ] **11A** Acesso restrito ao perfil administrador  
 - [ ] Métricas: usuários cadastrados, acessos, acessos/dia  
 - [ ] Indicadores de utilização + gráficos  
 - [ ] Painel informativo (sem gestão complexa de usuários no piloto)  
@@ -124,12 +125,13 @@
 ---
 
 ## Sprint 12 — Polimento e publicação piloto
-- [ ] Logo e paleta oficiais aplicadas  
+- [x] Logo e paleta oficiais aplicadas  
+- [ ] Splash / ícone de loja alinhados à marca  
 - [ ] Testes de fluxo principal em campo (poucos cliques)  
 - [ ] Revisão de pendências críticas com o cliente  
 - [ ] Build de loja (Google Play)  
 - [ ] Contas/infra vinculadas ao cliente  
-- [ ] Checklist de segurança (Auth, Storage, rules)  
+- [ ] Checklist de segurança (Auth, rules; Storage só se Biblioteca PDF)  
 
 ---
 
@@ -141,6 +143,7 @@
 - [ ] Novos checklists / OS / planilhas  
 - [ ] Recursos extras exclusivos do assinante  
 - [ ] App Store  
+- [ ] Persistência de imagem de análise (reabrir 5B) — só com nova decisão de produto  
 
 ---
 
@@ -148,9 +151,9 @@
 
 | Item | Impacta |
 |------|---------|
-| Billing Firebase Storage | Upload, 5B, 6B, PDFs |
-| Chave OpenAI | Sprint 4B |
+| Chave OpenAI / backend | **4B** (não precisa Storage) |
 | Lista oficial checklists/OS/planilhas | Sprints 6–7 (refino) |
-| Fonte de atualização das NRs | Sprint 9 (disparo) |
-| Regras free vs Premium + pagamento | Sprint 10B |
+| Fonte de atualização das NRs | Sprint **9B** |
+| Regras free vs Premium + pagamento | Sprint **10B** |
 | Contas de loja/Firebase do cliente | Sprint 12 |
+| Billing Firebase Storage | Só 6B/8 PDF **se** aprovado — **não** bloqueia análise/4B |

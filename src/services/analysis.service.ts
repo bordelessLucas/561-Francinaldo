@@ -74,7 +74,8 @@ export type CreateAnalysisFromImageInput = {
 };
 
 /**
- * Fluxo Sprint 3 (Storage): só quando EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD=true.
+ * Legado / fora do fluxo oficial do piloto (análise efêmera).
+ * Só corre se EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD=true — não usar para Vision/4B.
  */
 export async function createAnalysisFromImage(
   input: CreateAnalysisFromImageInput,
@@ -138,8 +139,8 @@ export type RunAnalysisWithoutUploadInput = {
 };
 
 /**
- * Sprint 4A: pending → analyzing → IA mock → done|failed.
- * Sem upload Storage (localOnly: true).
+ * Fluxo oficial do piloto: pending → analyzing → IA → done|failed.
+ * Imagem efêmera (`localOnly: true`); sem upload Storage; Firestore só texto/`result`.
  */
 export async function runAnalysisWithoutUpload(
   input: RunAnalysisWithoutUploadInput,

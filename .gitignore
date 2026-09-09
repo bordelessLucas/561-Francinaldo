@@ -36,6 +36,7 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+.netlify/
 
 # scaffold leftovers
 temp-app/

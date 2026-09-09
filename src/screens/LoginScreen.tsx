@@ -1,5 +1,5 @@
-import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -38,12 +38,18 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/(app)');
+    }
+  }, [loading, user]);
+
   if (loading) {
     return <LoadingState message="Verificando sessão..." />;
   }
 
   if (user) {
-    return <Redirect href="/(app)" />;
+    return <LoadingState message="Abrindo sua conta..." />;
   }
 
   async function handleLogin() {
@@ -85,7 +91,7 @@ export function LoginScreen() {
   return (
     <Container scroll keyboard>
       <View className="mb-10 mt-4 items-center">
-        <BrandMark size="lg" showTagline onDarkPlate />
+        <BrandMark size="lg" showTagline />
       </View>
 
       <View className="mb-8 gap-2">

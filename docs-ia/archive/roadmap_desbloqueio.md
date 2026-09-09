@@ -1,7 +1,8 @@
-# Alpha SST — Roadmap sem Storage / OpenAI
+# Alpha SST — Roadmap sem Storage / OpenAI (legado)
 
-> Documento vivo. Desenvolvimento **não para** por falta de Firebase Storage ou chave OpenAI.
-> Design system: [`design_system.md`](design_system.md). Processo: **plano → aprovação → implementação**.
+> **Arquivado.** Substituído por [`../roadmap.md`](../roadmap.md) (política de imagem efêmera + sequência atualizada).
+
+---
 
 ## Princípios
 

@@ -1,5 +1,7 @@
 # Sprint 5A — Histórico real (Firestore, sem Storage)
 
+> **Arquivado.** Status refletido no checklist. Política atual: histórico **sem** foto permanente (5B cancelada). Ver [`../roadmap.md`](../roadmap.md).
+
 > **Status:** `implementada`
 
 ## Entregue

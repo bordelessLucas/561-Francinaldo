@@ -1,7 +1,9 @@
-import { Pressable, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { View } from 'react-native';
+import { useLocalSearchParams, type Href } from 'expo-router';
 
+import { useAppTheme } from '@/contexts/ThemeContext';
 import {
+  BackLink,
   Body,
   Button,
   Caption,
@@ -9,6 +11,8 @@ import {
   EmptyState,
   Heading,
   Label,
+  Surface,
+  safeBack,
 } from '@/src/components';
 import { getLibraryDocument } from '@/src/data/library-catalog';
 
@@ -16,6 +20,7 @@ import { getLibraryDocument } from '@/src/data/library-catalog';
  * Detalhe de material da Biblioteca (metadados; sem download Storage).
  */
 export function LibraryDocumentScreen() {
+  const { colors } = useAppTheme();
   const { categoryId, docId } = useLocalSearchParams<{
     categoryId: string;
     docId: string;
@@ -26,9 +31,10 @@ export function LibraryDocumentScreen() {
     return (
       <Container>
         <EmptyState title="Material não encontrado" description="Ele pode ter sido movido ou removido." />
-        <Pressable onPress={() => router.back()} className="mt-4">
-          <Caption className="text-center text-brand-dark">Voltar</Caption>
-        </Pressable>
+        <BackLink
+          className="mt-4 self-center"
+          fallbackHref={`/(app)/library/${categoryId ?? ''}` as Href}
+        />
       </Container>
     );
   }
@@ -37,38 +43,48 @@ export function LibraryDocumentScreen() {
 
   return (
     <Container scroll>
-      <Pressable onPress={() => router.back()} className="mb-4 self-start py-1">
-        <Caption className="font-sansSemi text-brand-dark">Voltar</Caption>
-      </Pressable>
+      <BackLink
+        className="mb-4"
+        fallbackHref={`/(app)/library/${categoryId ?? ''}` as Href}
+      />
 
-      <Caption className="text-brand-dark">{category.title}</Caption>
+      <Caption style={{ color: colors.brandDark }}>{category.title}</Caption>
       <Heading className="mt-2">{document.title}</Heading>
       <Caption className="mt-2">{document.meta}</Caption>
 
-      <View className="mt-6 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mt-6">
         <Label>Resumo</Label>
         <Body className="mt-3">{document.summary}</Body>
         {document.tags?.length ? (
           <View className="mt-4 flex-row flex-wrap gap-2">
             {document.tags.map((tag) => (
-              <View key={tag} className="rounded-full bg-brand-mist px-3 py-1 dark:bg-brand-mist-dark">
-                <Caption className="text-brand-dark dark:text-brand-accent">{tag}</Caption>
+              <View
+                key={tag}
+                className="rounded-full px-3 py-1"
+                style={{ backgroundColor: colors.brandMist }}
+              >
+                <Caption style={{ color: colors.brandDark }}>{tag}</Caption>
               </View>
             ))}
           </View>
         ) : null}
-      </View>
+      </Surface>
 
-      <View className="mt-4 rounded-3xl bg-brand-mist px-5 py-4 dark:bg-brand-mist-dark">
-        <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">
+      <Surface tone="accent" className="mt-4">
+        <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
           Arquivo em breve
         </Caption>
-        <Caption className="mt-1 text-brand-dark dark:text-brand-accent">
+        <Caption className="mt-1" style={{ color: colors.brandDark }}>
           O PDF completo ainda não está disponível. Você está vendo só o resumo do catálogo.
         </Caption>
-      </View>
+      </Surface>
 
-      <Button label="Voltar à lista" variant="secondary" onPress={() => router.back()} className="mt-6" />
+      <Button
+        label="Voltar à lista"
+        variant="secondary"
+        onPress={() => safeBack(`/(app)/library/${categoryId ?? ''}` as Href)}
+        className="mt-6"
+      />
     </Container>
   );
 }

@@ -1,8 +1,17 @@
 import { getAiProvider, isAiForceFailEnabled } from '@/lib/featureFlags';
 import type { AnalysisResult } from '@/lib/types';
+import { readLocalImageAsBase64 } from '@/src/services/ai/image';
+import {
+  analyzeViaOpenAiDirect,
+  analyzeViaRemoteEndpoint,
+  getAiModel,
+  getAnalyzeUrl,
+  hasOpenAiCredentials,
+} from '@/src/services/ai/openai';
 import { buildMockAnalysisResult } from '@/src/services/mocks/analysis-result.mock';
 
 export type AnalyzeSituationImageInput = {
+  /** URI local da sessão — não persistir; descartar após a análise. */
   localUri: string;
 };
 
@@ -13,8 +22,9 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
- * Análise de situação — Sprint 4A: apenas mock.
- * Assinatura estável para trocar por GPT (openai) quando houver chave.
+ * Análise de situação (imagem efêmera).
+ * - mock: fixture local
+ * - openai: Vision (Netlify Function preferida; fallback direto no piloto)
  */
 export async function analyzeSituationImage(
   input: AnalyzeSituationImageInput,
@@ -26,8 +36,26 @@ export async function analyzeSituationImage(
   const provider = getAiProvider();
 
   if (provider === 'openai') {
-    // 4B: OpenAI Vision — não implementar até chave/billing do cliente.
-    throw new Error('AI_PROVIDER_NOT_READY');
+    if (!hasOpenAiCredentials()) {
+      throw new Error('AI_PROVIDER_NOT_READY');
+    }
+
+    const image = await readLocalImageAsBase64(input.localUri);
+    const model = getAiModel();
+    const endpoint = getAnalyzeUrl();
+
+    if (endpoint) {
+      return analyzeViaRemoteEndpoint(
+        { base64: image.base64, mimeType: image.mimeType, model },
+        endpoint,
+      );
+    }
+
+    return analyzeViaOpenAiDirect({
+      base64: image.base64,
+      mimeType: image.mimeType,
+      model,
+    });
   }
 
   await delay(MOCK_DELAY_MS);

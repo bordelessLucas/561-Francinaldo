@@ -8,7 +8,15 @@ import {
   type ThemePreference,
 } from '@/contexts/ThemeContext';
 import { brand } from '@/constants/theme';
-import { Body, Caption, Container, Heading, Label } from '@/src/components';
+import {
+  BackLink,
+  Body,
+  Caption,
+  Container,
+  Heading,
+  Label,
+  Surface,
+} from '@/src/components';
 
 const THEME_OPTIONS: {
   value: ThemePreference;
@@ -52,7 +60,10 @@ function SettingsRow({
   const { colors } = useAppTheme();
   const content = (
     <View className="flex-row items-center gap-3 px-5 py-4">
-      <View className="h-10 w-10 items-center justify-center rounded-2xl bg-brand-mist dark:bg-brand-mist-dark">
+      <View
+        className="h-10 w-10 items-center justify-center rounded-2xl"
+        style={{ backgroundColor: colors.brandMist }}
+      >
         <Ionicons name={icon} size={20} color={colors.brandDark} />
       </View>
       <View className="flex-1">
@@ -60,7 +71,7 @@ function SettingsRow({
         {subtitle ? <Caption className="mt-1">{subtitle}</Caption> : null}
       </View>
       {trailing ? (
-        <Caption className="text-brand-dark dark:text-brand-accent">{trailing}</Caption>
+        <Caption style={{ color: colors.brandDark }}>{trailing}</Caption>
       ) : onPress ? (
         <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
       ) : null}
@@ -72,11 +83,9 @@ function SettingsRow({
   }
 
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className="active:bg-canvas dark:active:bg-canvas-dark"
-    >
+    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => ({
+      backgroundColor: pressed ? colors.canvas : 'transparent',
+    })}>
       {content}
     </Pressable>
   );
@@ -92,9 +101,7 @@ export function SettingsScreen() {
 
   return (
     <Container scroll>
-      <Pressable onPress={() => router.back()} className="mb-4 self-start py-1">
-        <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">Voltar</Caption>
-      </Pressable>
+      <BackLink className="mb-4" fallbackHref={'/(app)/profile' as Href} />
 
       <View className="mb-6 gap-2">
         <Heading>Configurações</Heading>
@@ -102,7 +109,7 @@ export function SettingsScreen() {
       </View>
 
       <Label className="mb-3">Aparência</Label>
-      <View className="mb-6 overflow-hidden rounded-3xl border border-line bg-surface dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-6" padding={false}>
         {THEME_OPTIONS.map((option, index) => {
           const selected = preference === option.value;
           return (
@@ -111,16 +118,15 @@ export function SettingsScreen() {
               onPress={() => setPreference(option.value)}
               accessibilityRole="radio"
               accessibilityState={{ selected }}
-              className={`flex-row items-center gap-3 px-5 py-4 active:bg-canvas dark:active:bg-canvas-dark ${
-                index > 0 ? 'border-t border-line dark:border-line-dark' : ''
-              }`}
+              className="flex-row items-center gap-3 px-5 py-4"
+              style={{
+                borderTopWidth: index > 0 ? 1 : 0,
+                borderTopColor: colors.line,
+              }}
             >
               <View
-                className={`h-10 w-10 items-center justify-center rounded-2xl ${
-                  selected
-                    ? 'bg-brand'
-                    : 'bg-brand-mist dark:bg-brand-mist-dark'
-                }`}
+                className="h-10 w-10 items-center justify-center rounded-2xl"
+                style={{ backgroundColor: selected ? colors.brand : colors.brandMist }}
               >
                 <Ionicons
                   name={option.icon}
@@ -140,7 +146,7 @@ export function SettingsScreen() {
             </Pressable>
           );
         })}
-      </View>
+      </Surface>
 
       <Caption className="mb-6">
         Tema em uso agora: {scheme === 'dark' ? 'escuro' : 'claro'}
@@ -148,31 +154,31 @@ export function SettingsScreen() {
       </Caption>
 
       <Label className="mb-3">Preferências</Label>
-      <View className="mb-6 overflow-hidden rounded-3xl border border-line bg-surface dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-6" padding={false}>
         <SettingsRow
           icon="notifications-outline"
           title="Avisos de NRs"
           subtitle="Permissão e cadastro deste aparelho"
           onPress={() => router.push('/(app)/nr-alerts' as Href)}
         />
-        <View className="h-px bg-line dark:bg-line-dark" />
+        <View className="h-px" style={{ backgroundColor: colors.line }} />
         <SettingsRow
           icon="diamond-outline"
           title="Planos"
           subtitle="Free, Premium e o que muda em cada um"
           onPress={() => router.push('/(app)/plans' as Href)}
         />
-      </View>
+      </Surface>
 
       <Label className="mb-3">Sobre</Label>
-      <View className="overflow-hidden rounded-3xl border border-line bg-surface dark:border-line-dark dark:bg-surface-dark">
+      <Surface padding={false}>
         <SettingsRow
           icon="shield-checkmark-outline"
           title={brand.name}
           subtitle={brand.tagline}
           trailing={`v${appVersion}`}
         />
-      </View>
+      </Surface>
     </Container>
   );
 }

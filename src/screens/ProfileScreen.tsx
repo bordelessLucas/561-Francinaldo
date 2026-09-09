@@ -6,7 +6,7 @@ import { usePlanPreview } from '@/contexts/PlanPreviewContext';
 import { useAppTheme } from '@/contexts/ThemeContext';
 import { getPlanKind, getStatusLabel, isPremiumRole } from '@/lib/access';
 import type { UserProfile } from '@/lib/types';
-import { Body, Button, Caption, Container, Heading, Label } from '@/src/components';
+import { Body, Button, Caption, Container, Heading, Label, Surface } from '@/src/components';
 
 type ProfileScreenProps = {
   profile: UserProfile | null;
@@ -45,29 +45,29 @@ export function ProfileScreen({
         <PlanTag plan={planKind} />
       </View>
 
-      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-4">
         <ProfileField label="Nome" value={profile?.name || nameFallback || '—'} />
-        <View className="my-4 h-px bg-line dark:bg-line-dark" />
+        <View className="my-4 h-px" style={{ backgroundColor: colors.line }} />
         <ProfileField label="E-mail" value={profile?.email || emailFallback || '—'} />
-        <View className="my-4 h-px bg-line dark:bg-line-dark" />
+        <View className="my-4 h-px" style={{ backgroundColor: colors.line }} />
         <ProfileField label="Status" value={getStatusLabel(profile?.status)} />
-      </View>
+      </Surface>
 
-      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-4">
         <Caption>Plano</Caption>
         <View className="mt-3 flex-row items-center gap-3">
           <PlanTag plan={planKind} />
-          <Body className="flex-1 text-ink-muted dark:text-ink-muted-inverse">
+          <Body className="flex-1">
             {realPremium
               ? 'Experiência sem anúncios quando a publicidade estiver ativa.'
               : 'Mesmas telas do Premium. Anúncios poderão aparecer no plano Free no futuro.'}
           </Body>
         </View>
-      </View>
+      </Surface>
 
-      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-4">
         <Caption>App</Caption>
-        <Body className="mt-2 text-ink-muted dark:text-ink-muted-inverse">
+        <Body className="mt-2">
           Tema, avisos de NRs, planos e informações do aplicativo.
         </Body>
         <Button
@@ -76,10 +76,10 @@ export function ProfileScreen({
           onPress={() => router.push('/(app)/settings' as Href)}
           className="mt-4"
         />
-      </View>
+      </Surface>
 
       {__DEV__ && !isRealPremium ? (
-        <View className="mb-4 rounded-3xl border border-dashed border-line bg-surface px-5 py-4 dark:border-line-dark dark:bg-surface-dark">
+        <Surface className="mb-4" style={{ borderStyle: 'dashed' }}>
           <View className="flex-row items-center justify-between gap-3">
             <Caption className="flex-1">
               Dev: prévia visual da tag Premium (não muda funções)
@@ -91,7 +91,7 @@ export function ProfileScreen({
               thumbColor={demoAsPremium ? colors.brandDark : colors.white}
             />
           </View>
-        </View>
+        </Surface>
       ) : null}
 
       <Button label="Sair" variant="secondary" onPress={onLogout} />

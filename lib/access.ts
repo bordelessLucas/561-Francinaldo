@@ -40,7 +40,7 @@ export function getStatusLabel(status: UserStatus | null | undefined): string {
 }
 
 export function getFirstName(fullName: string | null | undefined): string {
-  if (!fullName?.trim()) return 'profissional';
+  if (!fullName?.trim()) return 'Profissional SST';
   return fullName.trim().split(/\s+/)[0];
 }
 

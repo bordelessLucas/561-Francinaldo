@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect, type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import type { AnalysisRecord, RiskSeverity } from '@/lib/types';
 import {
+  BackLink,
   Body,
   Button,
   Caption,
@@ -13,6 +15,8 @@ import {
   Heading,
   Label,
   LoadingState,
+  Surface,
+  safeBack,
 } from '@/src/components';
 import { getAnalysisById } from '@/src/services/analysis.service';
 
@@ -28,6 +32,7 @@ const SEVERITY_LABEL: Record<RiskSeverity, string> = {
 export function AnalysisDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors } = useAppTheme();
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,15 +67,23 @@ export function AnalysisDetailScreen() {
   );
 
   if (loading) {
-    return <LoadingState message="Abrindo análise..." />;
+    return (
+      <Container>
+        <BackLink className="mb-4" fallbackHref={'/(app)/history' as Href} />
+        <LoadingState message="Abrindo análise..." />
+      </Container>
+    );
   }
 
   if (error || !record) {
     return (
       <ErrorState
+        withContainer
         message={error ?? 'Análise não encontrada.'}
-        actionLabel="Voltar"
-        onAction={() => router.back()}
+        actionLabel="Voltar ao histórico"
+        onAction={() => safeBack('/(app)/history' as Href)}
+        secondaryActionLabel="Ir para início"
+        onSecondaryAction={() => router.replace('/(app)/' as Href)}
       />
     );
   }
@@ -79,9 +92,7 @@ export function AnalysisDetailScreen() {
 
   return (
     <Container scroll>
-      <Pressable onPress={() => router.back()} className="mb-4 self-start py-1">
-        <Caption className="font-sansSemi text-brand-dark">Voltar</Caption>
-      </Pressable>
+      <BackLink className="mb-4" fallbackHref={'/(app)/history' as Href} />
 
       <View className="mb-6 gap-2">
         <Heading>Detalhe da análise</Heading>
@@ -92,15 +103,15 @@ export function AnalysisDetailScreen() {
       </View>
 
       {record.status === 'failed' ? (
-        <View className="mb-4 rounded-3xl bg-signal-soft px-5 py-4">
+        <Surface tone="signal" className="mb-4">
           <Label>Análise não concluída</Label>
           <Body className="mt-2">{record.errorMessage ?? 'Tente realizar uma nova análise.'}</Body>
-        </View>
+        </Surface>
       ) : null}
 
       {result ? (
         <View className="gap-4">
-          <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+          <Surface>
             <Label>Riscos identificados</Label>
             <View className="mt-4 gap-4">
               {result.risks.map((risk) => (
@@ -112,9 +123,9 @@ export function AnalysisDetailScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </Surface>
 
-          <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+          <Surface>
             <Label>Medidas de controle</Label>
             <View className="mt-4 gap-3">
               {result.controls.map((control, index) => {
@@ -122,15 +133,17 @@ export function AnalysisDetailScreen() {
                   result.risks.find((r) => r.id === control.riskId)?.title ?? control.riskId;
                 return (
                   <View key={`${control.riskId}-${index}`} className="gap-1">
-                    <Caption className="font-sansSemi text-brand-dark">{riskTitle}</Caption>
+                    <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
+                      {riskTitle}
+                    </Caption>
                     <Body>{control.measure}</Body>
                   </View>
                 );
               })}
             </View>
-          </View>
+          </Surface>
 
-          <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+          <Surface>
             <Label>NRs relacionadas</Label>
             <View className="mt-4 gap-3">
               {result.nrs.map((nr) => (
@@ -142,10 +155,10 @@ export function AnalysisDetailScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </Surface>
         </View>
       ) : (
-        <Body className="text-ink-muted">Nenhum resultado estruturado disponível nesta análise.</Body>
+        <Body>Nenhum resultado estruturado disponível nesta análise.</Body>
       )}
 
       <Button

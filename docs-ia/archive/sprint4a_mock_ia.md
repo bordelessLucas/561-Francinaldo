@@ -1,5 +1,7 @@
 # Sprint 4A — Análise IA (mock GPT)
 
+> **Arquivado.** Fonte de verdade: [`../escopo.md`](../escopo.md), [`../checklist_sprints.md`](../checklist_sprints.md), [`../roadmap.md`](../roadmap.md).
+
 ## Decisões
 
 - Provedor **alvo:** GPT (OpenAI Vision) — integração real na **4B**

@@ -1,5 +1,7 @@
 # Sprint 10A — Esqueleto Premium (UI/UX)
 
+> **Arquivado.** Decisões no checklist/escopo. Perguntas ao cliente migradas para pendências em [`../escopo.md`](../escopo.md).
+
 ## Objetivo
 
 Apresentar Free vs Premium com **mesmas telas**; diferença principal: **anúncios no Free (futuro)**. Tag **Free / Premium** no perfil e na Home.

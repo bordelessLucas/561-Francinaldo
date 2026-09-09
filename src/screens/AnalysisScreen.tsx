@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, View } from 'react-native';
 import { router, type Href } from 'expo-router';
 
@@ -6,7 +6,16 @@ import { useAppTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAiProvider } from '@/lib/featureFlags';
 import type { AnalysisResult, RiskSeverity } from '@/lib/types';
-import { Body, Button, Caption, Container, Heading, Label } from '@/src/components';
+import {
+  BackLink,
+  Body,
+  Button,
+  Caption,
+  Container,
+  Heading,
+  Label,
+  Surface,
+} from '@/src/components';
 import { runAnalysisWithoutUpload } from '@/src/services/analysis.service';
 import { pickFromCamera, pickFromGallery, type PickedImage } from '@/src/services/media.service';
 
@@ -17,9 +26,6 @@ const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   medium: 'Média',
   high: 'Alta',
 };
-
-const CARD =
-  'rounded-3xl border border-line bg-surface dark:border-line-dark dark:bg-surface-dark';
 
 function getCaptureErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -35,9 +41,24 @@ function getCaptureErrorMessage(error: unknown): string {
       case 'AI_MISSING_IMAGE':
         return 'Selecione uma imagem para continuar.';
       case 'AI_PROVIDER_NOT_READY':
-        return 'A análise assistida está temporariamente indisponível. Tente novamente em instantes.';
+        return 'A análise assistida está temporariamente indisponível. Verifique a chave OpenAI ou a URL da API.';
+      case 'AI_AUTH_FAILED':
+        return 'Falha de autenticação com a IA. Confira a chave OpenAI no ambiente.';
+      case 'AI_QUOTA_EXCEEDED':
+        return 'A conta OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
+      case 'AI_BAD_IMAGE':
+        return 'A imagem não pôde ser analisada. Tente outra foto (boa iluminação, JPEG).';
+      case 'AI_UPSTREAM_ERROR':
+        return 'O provedor de IA não respondeu corretamente. Tente novamente em instantes.';
+      case 'AI_INVALID_JSON':
+      case 'AI_INVALID_PAYLOAD':
+      case 'AI_EMPTY_RISKS':
+      case 'AI_EMPTY_RESPONSE':
+        return 'A IA retornou um resultado incompleto. Tente outra foto ou tente de novo.';
+      case 'IMAGE_READ_FAILED':
+        return 'Não foi possível ler a imagem selecionada.';
       case 'STORAGE_UPLOAD_DISABLED':
-        return 'O envio da imagem ficará disponível em breve. A análise local continua funcionando.';
+        return 'A análise não depende de armazenamento na nuvem. Tente novamente o fluxo local.';
       default:
         break;
     }
@@ -59,7 +80,8 @@ function getCaptureErrorMessage(error: unknown): string {
 }
 
 /**
- * Nova análise — captura, confirmação e resultado (riscos, controles, NRs).
+ * Nova análise — captura efêmera, confirmação e resultado (riscos, controles, NRs).
+ * A foto fica só na sessão; ao sair da tela ou iniciar nova análise a URI é descartada.
  */
 export function AnalysisScreen() {
   const { user } = useAuth();
@@ -71,6 +93,13 @@ export function AnalysisScreen() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  /** Preview só enquanto a tela mostra o resultado; limpo ao sair / nova análise. */
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+
+  const discardEphemeralImage = useCallback(() => {
+    setPicked(null);
+    setPreviewUri(null);
+  }, []);
 
   async function handlePick(from: 'camera' | 'gallery') {
     if (!user) {
@@ -96,7 +125,7 @@ export function AnalysisScreen() {
 
   function handleChangeImage() {
     setError(null);
-    setPicked(null);
+    discardEphemeralImage();
     setStep('idle');
     setResult(null);
     setSavedId(null);
@@ -108,16 +137,21 @@ export function AnalysisScreen() {
       return;
     }
 
+    const sessionUri = picked.localUri;
+    const sessionSource = picked.source;
+
     setError(null);
     setStep('analyzing');
     try {
       const record = await runAnalysisWithoutUpload({
         uid: user.uid,
-        localUri: picked.localUri,
-        source: picked.source,
+        localUri: sessionUri,
+        source: sessionSource,
       });
       setResult(record.result ?? null);
       setSavedId(record.id);
+      setPreviewUri(sessionUri);
+      setPicked(null);
       setStep('result');
     } catch (err) {
       setError(getCaptureErrorMessage(err));
@@ -131,19 +165,41 @@ export function AnalysisScreen() {
       void handleConfirm();
       return;
     }
+    discardEphemeralImage();
     setStep('idle');
   }
 
   function handleNewAnalysis() {
-    setPicked(null);
+    discardEphemeralImage();
     setResult(null);
     setSavedId(null);
     setError(null);
     setStep('idle');
   }
 
+  function handleLeaveFlow() {
+    discardEphemeralImage();
+    setResult(null);
+    setSavedId(null);
+    setError(null);
+    setStep('idle');
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/(app)/' as Href);
+  }
+
   return (
     <Container scroll>
+      {step !== 'idle' ? (
+        <BackLink
+          className="mb-2 mt-2"
+          label={step === 'analyzing' ? 'Cancelar' : 'Voltar'}
+          fallbackHref={'/(app)/' as Href}
+          onPress={handleLeaveFlow}
+        />
+      ) : null}
       <View className="mb-8 mt-2 gap-2">
         <Heading>Nova análise</Heading>
         <Body>
@@ -154,7 +210,7 @@ export function AnalysisScreen() {
 
       {step === 'idle' ? (
         <View className="gap-4">
-          <View className={`px-5 py-5 ${CARD}`}>
+          <Surface>
             <Label>Registrar situação</Label>
             <Caption className="mt-2">
               Use a câmera no local ou escolha uma foto já salva na galeria.
@@ -173,16 +229,17 @@ export function AnalysisScreen() {
               disabled={picking}
               className="mt-3"
             />
-          </View>
+          </Surface>
         </View>
       ) : null}
 
       {step === 'preview' && picked ? (
         <View className="gap-4">
-          <View className={`overflow-hidden ${CARD}`}>
+          <Surface padding={false}>
             <Image
               source={{ uri: picked.localUri }}
-              className="h-72 w-full bg-canvas dark:bg-canvas-dark"
+              className="h-72 w-full"
+              style={{ backgroundColor: colors.canvas }}
               resizeMode="cover"
               accessibilityLabel="Pré-visualização da situação capturada"
             />
@@ -193,7 +250,7 @@ export function AnalysisScreen() {
                 ou troque a foto.
               </Caption>
             </View>
-          </View>
+          </Surface>
 
           <Button label="Confirmar e analisar" onPress={handleConfirm} />
           <Button label="Trocar imagem" variant="outline" onPress={handleChangeImage} />
@@ -201,39 +258,40 @@ export function AnalysisScreen() {
       ) : null}
 
       {step === 'analyzing' ? (
-        <View className={`items-center px-5 py-10 ${CARD}`}>
+        <Surface className="items-center py-10">
           <ActivityIndicator size="large" color={colors.brand} />
           <Label className="mt-5">Analisando…</Label>
           <Caption className="mt-2 text-center">
             Identificando riscos, medidas de controle e NRs aplicáveis.
           </Caption>
-        </View>
+        </Surface>
       ) : null}
 
       {step === 'result' && result ? (
         <View className="gap-4">
           {isMockAi ? (
-            <View className="rounded-2xl bg-brand-mist px-4 py-3 dark:bg-brand-mist-dark">
-              <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">
+            <Surface tone="accent">
+              <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
                 Demonstração — resultado simulado
               </Caption>
               <Caption className="mt-1">
                 A análise assistida real será ativada quando a IA estiver configurada. O registro já
-                foi salvo no histórico.
+                foi salvo no histórico. A foto desta sessão não é enviada ao armazenamento na nuvem.
               </Caption>
-            </View>
+            </Surface>
           ) : null}
 
-          {picked ? (
+          {previewUri ? (
             <Image
-              source={{ uri: picked.localUri }}
-              className="h-40 w-full rounded-3xl bg-canvas dark:bg-canvas-dark"
+              source={{ uri: previewUri }}
+              className="h-40 w-full rounded-3xl"
+              style={{ backgroundColor: colors.canvas }}
               resizeMode="cover"
               accessibilityLabel="Situação analisada"
             />
           ) : null}
 
-          <View className={`px-5 py-5 ${CARD}`}>
+          <Surface>
             <Label>Riscos identificados</Label>
             <View className="mt-4 gap-4">
               {result.risks.map((risk) => (
@@ -245,9 +303,9 @@ export function AnalysisScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </Surface>
 
-          <View className={`px-5 py-5 ${CARD}`}>
+          <Surface>
             <Label>Medidas de controle</Label>
             <View className="mt-4 gap-3">
               {result.controls.map((control, index) => {
@@ -255,7 +313,7 @@ export function AnalysisScreen() {
                   result.risks.find((r) => r.id === control.riskId)?.title ?? control.riskId;
                 return (
                   <View key={`${control.riskId}-${index}`} className="gap-1">
-                    <Caption className="font-sansSemi text-brand-dark dark:text-brand-accent">
+                    <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
                       {riskTitle}
                     </Caption>
                     <Body>{control.measure}</Body>
@@ -263,9 +321,9 @@ export function AnalysisScreen() {
                 );
               })}
             </View>
-          </View>
+          </Surface>
 
-          <View className={`px-5 py-5 ${CARD}`}>
+          <Surface>
             <Label>NRs relacionadas</Label>
             <View className="mt-4 gap-3">
               {result.nrs.map((nr) => (
@@ -277,7 +335,7 @@ export function AnalysisScreen() {
                 </View>
               ))}
             </View>
-          </View>
+          </Surface>
 
           {savedId ? (
             <Button
@@ -296,19 +354,19 @@ export function AnalysisScreen() {
 
       {step === 'error' ? (
         <View className="gap-4">
-          <View className="rounded-3xl bg-signal-soft px-5 py-5 dark:bg-signal-soft-dark">
+          <Surface tone="signal">
             <Label>Não foi possível analisar</Label>
             <Body className="mt-2">{error ?? 'Tente novamente.'}</Body>
-          </View>
+          </Surface>
           <Button label="Tentar novamente" onPress={handleRetry} />
           <Button label="Trocar imagem" variant="outline" onPress={handleChangeImage} />
         </View>
       ) : null}
 
       {error && step !== 'error' ? (
-        <View className="mt-5 rounded-2xl bg-signal-soft px-4 py-3 dark:bg-signal-soft-dark">
-          <Caption className="text-ink-soft dark:text-ink-inverse">{error}</Caption>
-        </View>
+        <Surface tone="signal" className="mt-5">
+          <Caption style={{ color: colors.inkSoft }}>{error}</Caption>
+        </Surface>
       ) : null}
     </Container>
   );

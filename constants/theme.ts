@@ -1,26 +1,26 @@
-/** Paleta light — uso em campo / luz do dia */
+/** Paleta light — campo / luz do dia (design system próprio) */
 export const lightColors = {
-  ink: '#0A1A12',
-  inkSoft: '#163326',
-  inkMuted: '#5A6F62',
-  canvas: '#F0F5F1',
-  canvasElev: '#F7FAF8',
+  ink: '#0B1F14',
+  inkSoft: '#1A3326',
+  inkMuted: '#4F675A',
+  canvas: '#F3F7F4',
+  canvasElev: '#FAFCFA',
   surface: '#FFFFFF',
   brand: '#0E7A42',
   brandDark: '#084828',
   brandLight: '#14964F',
-  brandAccent: '#8CC458',
-  brandMist: '#E3F3E9',
-  signal: '#D97706',
-  signalSoft: '#FEF3C7',
-  line: '#D0DED5',
+  brandAccent: '#2F9E57',
+  brandMist: '#E8F5EC',
+  signal: '#C9780E',
+  signalSoft: '#FFF4DE',
+  line: '#D7E3DB',
   white: '#FFFFFF',
   brandBlack: '#000000',
   tabBar: '#FFFFFF',
-  tabInactive: '#5A6F62',
+  tabInactive: '#6A7F73',
 } as const;
 
-/** Paleta dark — segue Appearance do sistema */
+/** Paleta dark — mesma vibe, contraste outdoor */
 export const darkColors = {
   ink: '#ECF3EF',
   inkSoft: '#D5E4DB',
@@ -63,7 +63,7 @@ export type AppColors = {
   tabInactive: string;
 };
 
-/** @deprecated Prefer useAppTheme().colors — alias light para imports legados */
+/** @deprecated Prefer useAppTheme().colors */
 export const colors = lightColors;
 
 export const brand = {

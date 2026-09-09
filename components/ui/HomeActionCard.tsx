@@ -1,4 +1,7 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+
+import { useAppTheme } from '@/contexts/ThemeContext';
+import { Surface } from '@/src/components/Surface';
 
 type HomeActionCardProps = {
   title: string;
@@ -13,29 +16,29 @@ export function HomeActionCard({
   onPress,
   emphasized = false,
 }: HomeActionCardProps) {
+  const { colors } = useAppTheme();
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={`rounded-3xl px-5 py-5 active:opacity-90 ${
-        emphasized ? 'bg-ink' : 'border border-line bg-white'
-      }`}
-    >
-      <Text className={`font-sansSemi text-lg ${emphasized ? 'text-white' : 'text-ink'}`}>
+    <Surface tone={emphasized ? 'accent' : 'default'} onPress={onPress} padding>
+      <Text
+        className="font-sansSemi text-lg"
+        style={{ color: emphasized ? colors.brandDark : colors.ink }}
+      >
         {title}
       </Text>
       <Text
-        className={`mt-2 font-sans text-sm leading-5 ${
-          emphasized ? 'text-white/75' : 'text-ink-muted'
-        }`}
+        className="mt-2 font-sans text-sm leading-5"
+        style={{ color: emphasized ? colors.inkSoft : colors.inkMuted }}
       >
         {description}
       </Text>
       {emphasized ? (
-        <View className="mt-4 self-start rounded-full bg-brand px-4 py-2">
-          <Text className="font-sansSemi text-sm text-white">Começar</Text>
+        <View className="mt-4 self-start rounded-full px-4 py-2" style={{ backgroundColor: colors.brand }}>
+          <Text className="font-sansSemi text-sm" style={{ color: colors.white }}>
+            Começar
+          </Text>
         </View>
       ) : null}
-    </Pressable>
+    </Surface>
   );
 }

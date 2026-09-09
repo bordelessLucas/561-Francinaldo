@@ -1,5 +1,5 @@
-import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { BrandMark } from '@/components/ui/BrandMark';
@@ -15,12 +15,18 @@ export function RegisterScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/(app)');
+    }
+  }, [loading, user]);
+
   if (loading) {
     return <LoadingState message="Verificando sessão..." />;
   }
 
   if (user) {
-    return <Redirect href="/(app)" />;
+    return <LoadingState message="Abrindo sua conta..." />;
   }
 
   async function handleRegister() {

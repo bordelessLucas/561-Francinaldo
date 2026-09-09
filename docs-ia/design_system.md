@@ -17,7 +17,7 @@ A UI deve seguir a **logo** e a **paleta extraída da logo**.
 - Cruz de segurança (verde profundo) com contorno lima  
 - Anel de setas no sentido horário (verde médio) — ciclo / processo contínuo  
 - Tipografia da marca: “ALPHA SST” em sans geométrica bold, verde médio  
-- Fundo típico da peça: preto (`#000000`)
+- Fundo típico da peça: preto (`#000000`) — **não** usar como fundo de cards no app
 
 ---
 
@@ -37,6 +37,32 @@ Evitar:
 - Experiência excessivamente complexa  
 - Telas densas / excesso de informação  
 - Fluxos longos para a análise de imagem  
+- **Light mode com cards pretos** (copiar o dark literalmente)
+
+---
+
+## Dois design systems (mesmo produto)
+
+O app tem **duas paletas irmãs** com a mesma vibe de campo, tipografia e componentes — não é “dark invertido”.
+
+| | **Light** | **Dark** |
+|--|-----------|----------|
+| Ideia | Luz do dia / campo aberto | Outdoor noturno / contraste alto |
+| Canvas | `#F3F7F4` | `#0B1410` |
+| Surface (cards) | `#FFFFFF` | `#15241C` |
+| Accent soft | `brandMist` `#E8F5EC` | `brandMist` `#143528` |
+| CTA hero | Surface `tone="accent"` (mist) + botão brand | Mesma estrutura, tokens dark |
+| Badge Free | Fundo claro + borda `line` | Elevação + borda `line` |
+| Tipografia | `ink` / `inkMuted` via `useAppTheme()` | Idem |
+
+### Fonte de verdade no código
+
+1. Tokens: `constants/theme.ts` (`lightColors` / `darkColors`)  
+2. Resolução: `ThemeContext` (`preference`: system | light | dark)  
+3. Superfícies: componente **`Surface`** (`src/components/Surface.tsx`) — **estilo JS**, não depende só de classes `dark:`  
+4. Texto: `Typography` + `PlanTag` + `Button` / `Input` leem `colors` do tema  
+
+**Regra:** cards, inputs, badges e modais de fluxo **não** devem usar `bg-surface-dark` / `dark:bg-*` como única fonte. Preferir `Surface` ou `style={{ backgroundColor: colors.* }}`.
 
 ---
 
@@ -49,36 +75,43 @@ Evitar:
 | Hierarquia | CTA principal destacado (ex.: iniciar análise) |
 | Navegação | Clara, previsível (tabs / fluxos curtos) |
 | Feedback | Estados explícitos: loading, vazio, erro, sucesso |
-| Modo | **Light / Dark** com preferência em Configurações: Sistema (padrão) · Claro · Escuro (persistido). Tokens em `constants/theme.ts`; resolução em `ThemeContext`. Superfícies de marca (hero preto, splash) permanecem escuras nos dois modos. |
-| Tab bar | Ordem: **Início · Biblioteca · Análise · Histórico · Perfil**. Análise central elevada (câmera). Aba ativa com cor brand + indicador; inativas muted. Configurações acessíveis por **Perfil → Configurações** (sem 6ª tab). |
+| Modo | **Light / Dark** com preferência em **Configurações**: Sistema (padrão) · Claro · Escuro (persistido) |
+| Tab bar | Ordem: **Início · Biblioteca · Análise · Histórico · Perfil**. Análise central elevada (câmera) |
+| Análise / mídia | Foto **efêmera** (sem Storage). Ver [`roadmap.md`](roadmap.md) |
 
 ---
 
 ## Paleta de cores
 
-### Oficial (extraída da logo)
+### Light (`lightColors`)
 
-Amostragem a partir de `assets/brand/alpha-sst-logo.png`:
+| Token | Hex | Uso |
+|-------|-----|-----|
+| `ink` | `#0B1F14` | Texto principal |
+| `inkMuted` | `#4F675A` | Texto secundário |
+| `canvas` | `#F3F7F4` | Fundo do app |
+| `canvasElev` | `#FAFCFA` | Elevação suave |
+| `surface` | `#FFFFFF` | Cards / sheets |
+| `brand` | `#0E7A42` | Primário |
+| `brandDark` | `#084828` | Ênfase / títulos de marca |
+| `brandMist` | `#E8F5EC` | Hero / chips / avisos brand |
+| `line` | `#D7E3DB` | Bordas |
+| `signal` / `signalSoft` | `#C9780E` / `#FFF4DE` | Alertas |
 
-| Token | Hex | Origem / uso |
-|-------|-----|----------------|
-| `brand` | `#0E7A42` | Verde médio (setas + texto da logo) — ações primárias |
-| `brand-dark` | `#084828` | Verde profundo (preenchimento da cruz) — pressionado / tabs ativas |
-| `brand-light` | `#14964F` | Verde médio mais claro — hovers / ênfase |
-| `brand-accent` | `#8CC458` | Lima (contorno da cruz) — destaques, sucesso, chips |
-| `brand-mist` | `#E3F3E9` | Tinta clara do brand — fundos suaves / badges |
-| `brand-black` | `#000000` | Fundo da peça de marca |
-| `ink` | `#0A1A12` | Texto principal (verde-preto) |
-| `ink-muted` | `#5A6F62` | Texto secundário |
-| `canvas` | `#F0F5F1` / dark `#0B1410` | Fundo do app |
-| `canvas-elev` | `#F7FAF8` / dark `#101C16` | Superfície elevada |
-| `surface` | `#FFFFFF` / dark `#15241C` | Cards |
-| `signal` | `#D97706` | Alertas / atenção (fora da logo; contraste funcional) |
-| `signal-soft` | `#FEF3C7` / dark `#3D2E12` | Fundo de aviso |
-| `line` | `#D0DED5` / dark `#2A3F34` | Bordas |
-| `white` | `#FFFFFF` | Texto em botões brand / superfícies fixas |
+### Dark (`darkColors`)
 
-Fonte de verdade no código: `constants/theme.ts` (`useAppTheme`) + `tailwind.config.js` (`darkMode: 'media'`).
+| Token | Hex | Uso |
+|-------|-----|-----|
+| `ink` | `#ECF3EF` | Texto principal |
+| `inkMuted` | `#9BB0A4` | Texto secundário |
+| `canvas` | `#0B1410` | Fundo |
+| `surface` | `#15241C` | Cards |
+| `brand` | `#1FA05A` | Primário |
+| `brandDark` | `#8CC458` | Ênfase lima |
+| `brandMist` | `#143528` | Soft brand |
+| `line` | `#2A3F34` | Bordas |
+
+Tailwind (`tailwind.config.js`) espelha tokens para utilitários pontuais; **UI estrutural** usa `Surface` + `useAppTheme`.
 
 ---
 
@@ -86,10 +119,20 @@ Fonte de verdade no código: `constants/theme.ts` (`useAppTheme`) + `tailwind.co
 
 | Papel | Diretriz |
 |-------|----------|
-| Display / títulos | Outfit (semi/bold) — sans geométrica próxima ao peso da marca |
-| Corpo | Source Sans 3 — legível em tela pequena |
-| Tamanhos | Hierarquia clara: título → subtítulo → corpo → meta |
-| Campo | Contraste alto; evitar texto muito fino |
+| Display / títulos | Outfit (semi/bold) |
+| Corpo | Source Sans 3 |
+| Cores | Sempre via `Typography` / `colors.ink*` — evita texto claro em fundo claro |
+
+---
+
+## Componentes
+
+| Componente | Papel |
+|------------|--------|
+| `Surface` | Card / bloco (tones: `default` · `elevated` · `accent` · `signal`) |
+| `Button` | primary / secondary / outline com cores do tema |
+| `PlanTag` | Free (borda suave) · Premium (mist) · Admin (brand) |
+| `Container` | Canvas + gradiente mist → canvas |
 
 ---
 
@@ -99,34 +142,17 @@ Fonte de verdade no código: `constants/theme.ts` (`useAppTheme`) + `tailwind.co
 |------------|-----|
 | Login / cadastro | Logo + nome + tagline |
 | Header do app | Marca compacta (logo) |
-| Splash / ícone | Alinhar progressivamente à peça oficial (Sprint 12) |
-
-Componente: `BrandMark` (`components/ui/BrandMark.tsx` e uso nas telas `src/`).
-
----
-
-## Componentes e padrões de informação
-
-- Botões com área de toque generosa (uso com luvas / pressa em campo)  
-- Cards só quando ajudam ação (não decorativos)  
-- Estados vazios reais (sem dados fictícios permanentes)  
-- Loading visível em análises e downloads  
-- Fluxo de análise: progresso perceptível (captura → envio → resultado)  
-
----
-
-## Referências visuais
-
-1. Logo do cliente (Alpha SST) — **recebida** (`assets/brand/alpha-sst-logo.png`)  
-2. Paleta derivada da logo — **aplicada**  
-3. Materiais oficiais adicionais — **a receber** (se houver)  
+| Splash / ícone | Alinhar progressivamente (Sprint 12) |
+| Configurações | Tema Sistema / Claro / Escuro |
 
 ---
 
 ## Checklist de aderência visual
 
-- [x] Logo oficial aplicada no design system e no app (login / header)  
-- [x] Paleta oficial substituindo tokens provisórios  
+- [x] Logo oficial aplicada  
+- [x] Paleta oficial nos tokens  
+- [x] Design system **light** próprio (não cards pretos)  
+- [x] Design system **dark** coerente  
+- [x] `Surface` / tipografia / PlanTag guiados por `useAppTheme`  
 - [ ] Splash / ícone de loja alinhados à marca  
-- [ ] Contraste validado para uso outdoor  
-- [x] CTA de análise como elemento dominante da Home  
+- [ ] Contraste validado outdoor (campo)

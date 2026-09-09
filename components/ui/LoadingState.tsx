@@ -10,9 +10,12 @@ export function LoadingState({ message = 'Carregando...' }: LoadingStateProps) {
   const { colors } = useAppTheme();
 
   return (
-    <View className="flex-1 items-center justify-center bg-canvas px-6 dark:bg-canvas-dark">
+    <View
+      className="flex-1 items-center justify-center px-6"
+      style={{ backgroundColor: colors.canvas }}
+    >
       <ActivityIndicator size="large" color={colors.brand} />
-      <Text className="mt-4 text-center font-sans text-base text-ink-muted dark:text-ink-muted-inverse">
+      <Text className="mt-4 text-center font-sans text-base" style={{ color: colors.inkMuted }}>
         {message}
       </Text>
     </View>

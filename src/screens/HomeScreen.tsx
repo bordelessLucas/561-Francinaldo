@@ -1,7 +1,18 @@
 import { View } from 'react-native';
 
 import { PlanTag } from '@/components/ui/PlanTag';
-import { AppHeader, Body, Button, Caption, Container, Heading, Label } from '@/src/components';
+import { useAppTheme } from '@/contexts/ThemeContext';
+import {
+  AppHeader,
+  Body,
+  Button,
+  Caption,
+  Container,
+  Heading,
+  Label,
+  QuickAccessCard,
+  Surface,
+} from '@/src/components';
 
 type HomeScreenProps = {
   userName?: string;
@@ -15,12 +26,14 @@ type HomeScreenProps = {
  * Home — saudação, CTA de análise e atalhos (mesma UX Free/Premium).
  */
 export function HomeScreen({
-  userName = 'profissional',
+  userName = 'Profissional SST',
   planKind = 'free',
   onStartAnalysis = () => {},
   onOpenLibrary = () => {},
   onOpenHistory = () => {},
 }: HomeScreenProps) {
+  const { colors } = useAppTheme();
+
   return (
     <Container scroll>
       <AppHeader subtitle="Segurança e saúde no trabalho" />
@@ -33,37 +46,41 @@ export function HomeScreen({
         <PlanTag plan={planKind} />
       </View>
 
-      <View className="mb-6 overflow-hidden rounded-3xl bg-brand-black px-5 py-6">
-        <Caption className="uppercase tracking-widest text-brand-accent">Começar</Caption>
-        <Label className="mt-3 text-2xl text-white">Nova análise</Label>
-        <Body className="mt-2 text-white/75">
+      <Surface tone="accent" className="mb-6">
+        <Caption className="uppercase tracking-widest" style={{ color: colors.brand }}>
+          Começar
+        </Caption>
+        <Label className="mt-3 text-2xl" style={{ color: colors.brandDark }}>
+          Nova análise
+        </Label>
+        <Body className="mt-2">
           Tire uma foto ou escolha da galeria. Em poucos passos você vê os riscos e as medidas
           sugeridas.
         </Body>
         <Button label="Iniciar análise" onPress={onStartAnalysis} className="mt-5" />
-      </View>
+      </Surface>
 
       <Label className="mb-3">Acessos rápidos</Label>
-      <View className="mb-6 flex-row gap-3">
-        <View className="flex-1 rounded-3xl border border-line bg-surface px-4 py-5 dark:border-line-dark dark:bg-surface-dark">
-          <Label>Biblioteca</Label>
-          <Caption className="mt-2">Catálogo SST (resumos)</Caption>
-          <Button label="Abrir" variant="outline" onPress={onOpenLibrary} className="mt-4 min-h-12" />
-        </View>
-        <View className="flex-1 rounded-3xl border border-line bg-surface px-4 py-5 dark:border-line-dark dark:bg-surface-dark">
-          <Label>Histórico</Label>
-          <Caption className="mt-2">Análises anteriores</Caption>
-          <Button label="Abrir" variant="outline" onPress={onOpenHistory} className="mt-4 min-h-12" />
-        </View>
+      <View className="mb-6 flex-row items-stretch gap-3">
+        <QuickAccessCard
+          title="Biblioteca"
+          description="Catálogo SST (resumos)"
+          onPress={onOpenLibrary}
+        />
+        <QuickAccessCard
+          title="Histórico"
+          description="Análises anteriores"
+          onPress={onOpenHistory}
+        />
       </View>
 
-      <View className="rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface>
         <Label>Dica de campo</Label>
         <Caption className="mt-2">
           Prefira fotos bem iluminadas, com o risco no centro da imagem. Isso melhora a leitura da
           situação e das NRs relacionadas.
         </Caption>
-      </View>
+      </Surface>
     </Container>
   );
 }

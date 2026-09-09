@@ -1,15 +1,18 @@
 import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { View } from 'react-native';
+import { useFocusEffect, type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import {
+  BackLink,
   Body,
   Button,
   Caption,
   Container,
   Heading,
   Label,
+  Surface,
 } from '@/src/components';
 import {
   getNrPushPermissionStatus,
@@ -21,6 +24,7 @@ import {
  */
 export function NrAlertsScreen() {
   const { user } = useAuth();
+  const { colors } = useAppTheme();
   const [status, setStatus] = useState<'granted' | 'denied' | 'undetermined'>('undetermined');
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
@@ -65,9 +69,7 @@ export function NrAlertsScreen() {
 
   return (
     <Container scroll>
-      <Pressable onPress={() => router.back()} className="mb-4 self-start py-1">
-        <Caption className="font-sansSemi text-brand-dark">Voltar</Caption>
-      </Pressable>
+      <BackLink className="mb-4" fallbackHref={'/(app)/settings' as Href} />
 
       <View className="mb-6 gap-2">
         <Heading>Avisos de NRs</Heading>
@@ -77,24 +79,24 @@ export function NrAlertsScreen() {
         </Body>
       </View>
 
-      <View className="mb-4 rounded-3xl border border-line bg-surface px-5 py-5 dark:border-line-dark dark:bg-surface-dark">
+      <Surface className="mb-4">
         <Caption>Status</Caption>
         <Label className="mt-2">{statusLabel}</Label>
         <Caption className="mt-3">
           No Expo Go o push remoto é limitado. Em um development build você libera a permissão e
           cadastra este aparelho. O envio automático das atualizações de NRs ainda será conectado.
         </Caption>
-      </View>
+      </Surface>
 
       {info ? (
-        <View className="mb-4 rounded-2xl bg-brand-mist px-4 py-3">
-          <Caption className="text-brand-dark">{info}</Caption>
-        </View>
+        <Surface tone="accent" className="mb-4">
+          <Caption style={{ color: colors.brandDark }}>{info}</Caption>
+        </Surface>
       ) : null}
       {error ? (
-        <View className="mb-4 rounded-2xl bg-signal-soft px-4 py-3">
-          <Caption className="text-ink-soft">{error}</Caption>
-        </View>
+        <Surface tone="signal" className="mb-4">
+          <Caption style={{ color: colors.inkSoft }}>{error}</Caption>
+        </Surface>
       ) : null}
 
       <Button

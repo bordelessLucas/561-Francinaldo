@@ -1,6 +1,6 @@
-# Vistora — Análise assistida de riscos
+# Alpha SST — Análise assistida de riscos
 
-Aplicativo mobile (Expo) para técnicos e gestores registrarem situações de campo.
+Aplicativo mobile (Expo) para profissionais SST e gestores registrarem situações de campo.
 
 ## Stack
 
@@ -19,12 +19,12 @@ cp .env.example .env
 npm start
 ```
 
-No Console Firebase, habilite Authentication (Email/Password), Firestore e Storage. Contas de usuário devem ser criadas pela administração (sem cadastro público no app).
+No Console Firebase, habilite Authentication (Email/Password), Firestore e Storage. O app já permite cadastro público; mantenha as regras e perfis alinhados ao piloto.
 
 Documento esperado em `users/{uid}`:
 
 ```
-uid, name, email, role (technician|manager), status (active|inactive), createdAt, updatedAt?
+uid, name, email, role (common|subscriber|admin), status (active|inactive), createdAt, updatedAt?
 ```
 
 Regras sugeridas: ver `firestore.rules` (leitura do próprio perfil; escrita bloqueada no cliente).

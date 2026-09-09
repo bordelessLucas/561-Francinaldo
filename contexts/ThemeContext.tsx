@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useColorScheme, View } from 'react-native';
+import { colorScheme as nativewindColorScheme } from 'nativewind';
 
 import {
   darkColors,
@@ -74,6 +75,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const scheme = resolveScheme(preference, systemScheme);
   const isDark = scheme === 'dark';
   const colors = getColors(scheme);
+
+  useEffect(() => {
+    nativewindColorScheme.set(preference === 'system' ? 'system' : scheme);
+  }, [preference, scheme]);
 
   const value = useMemo(
     () => ({

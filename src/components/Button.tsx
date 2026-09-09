@@ -1,5 +1,7 @@
 import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
 
+import { useAppTheme } from '@/contexts/ThemeContext';
+
 export type ButtonVariant = 'primary' | 'secondary' | 'outline';
 
 type ButtonProps = PressableProps & {
@@ -9,44 +11,50 @@ type ButtonProps = PressableProps & {
   className?: string;
 };
 
-const containerByVariant: Record<ButtonVariant, string> = {
-  primary: 'bg-brand active:bg-brand-dark',
-  secondary:
-    'bg-surface border border-line active:bg-canvas dark:bg-surface-dark dark:border-line-dark dark:active:bg-canvas-dark',
-  outline: 'bg-transparent border-2 border-brand active:bg-brand-mist dark:active:bg-brand-mist-dark',
-};
-
-const labelByVariant: Record<ButtonVariant, string> = {
-  primary: 'text-white',
-  secondary: 'text-ink dark:text-ink-inverse',
-  outline: 'text-brand-dark dark:text-brand-accent',
-};
-
-/** Botão atômico — sem regra de negócio. */
+/** Botão atômico — cores do tema ativo (light/dark). */
 export function Button({
   label,
   loading = false,
   variant = 'primary',
   disabled,
   className,
+  style,
   ...props
 }: ButtonProps) {
+  const { colors } = useAppTheme();
   const isDisabled = Boolean(disabled || loading);
+
+  const containerStyle =
+    variant === 'primary'
+      ? { backgroundColor: colors.brand, borderWidth: 0, borderColor: 'transparent' as const }
+      : variant === 'secondary'
+        ? { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.line }
+        : { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.brand };
+
+  const labelColor =
+    variant === 'primary' ? colors.white : variant === 'secondary' ? colors.ink : colors.brandDark;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
-      className={`min-h-14 items-center justify-center rounded-2xl px-5 ${containerByVariant[variant]} ${
+      className={`min-h-14 items-center justify-center rounded-2xl px-5 ${
         isDisabled ? 'opacity-50' : ''
       } ${className ?? ''}`}
+      style={
+        typeof style === 'function'
+          ? (state) => [containerStyle, style(state)]
+          : [containerStyle, style]
+      }
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#FFFFFF' : '#0E7A42'} />
+        <ActivityIndicator color={variant === 'primary' ? colors.white : colors.brand} />
       ) : (
-        <Text className={`font-sansSemi text-base ${labelByVariant[variant]}`}>{label}</Text>
+        <Text className="font-sansSemi text-base" style={{ color: labelColor }}>
+          {label}
+        </Text>
       )}
     </Pressable>
   );

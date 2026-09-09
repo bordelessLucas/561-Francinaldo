@@ -1,8 +1,9 @@
-import { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { router, useFocusEffect, type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppTheme } from '@/contexts/ThemeContext';
 import type { AnalysisRecord, AnalysisStatus } from '@/lib/types';
 import {
   Body,
@@ -11,9 +12,11 @@ import {
   Container,
   EmptyState,
   ErrorState,
+  FilterChips,
   Heading,
   Label,
   LoadingState,
+  Surface,
 } from '@/src/components';
 import { listAnalysesByUser } from '@/src/services/analysis.service';
 
@@ -24,6 +27,23 @@ const STATUS_LABEL: Record<AnalysisStatus, string> = {
   done: 'Concluída',
   failed: 'Falhou',
 };
+
+type HistoryFilter =
+  | 'all'
+  | 'done'
+  | 'failed'
+  | 'in_progress'
+  | 'camera'
+  | 'gallery';
+
+const FILTER_OPTIONS: { value: HistoryFilter; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'done', label: 'Concluídas' },
+  { value: 'failed', label: 'Falhas' },
+  { value: 'in_progress', label: 'Em andamento' },
+  { value: 'camera', label: 'Câmera' },
+  { value: 'gallery', label: 'Galeria' },
+];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -43,12 +63,33 @@ function summaryTitle(item: AnalysisRecord): string {
   return 'Análise de situação';
 }
 
+function matchesFilter(item: AnalysisRecord, filter: HistoryFilter): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'done':
+      return item.status === 'done';
+    case 'failed':
+      return item.status === 'failed';
+    case 'in_progress':
+      return item.status === 'pending' || item.status === 'uploaded' || item.status === 'analyzing';
+    case 'camera':
+      return item.source === 'camera';
+    case 'gallery':
+      return item.source === 'gallery';
+    default:
+      return true;
+  }
+}
+
 /**
- * Sprint 5A — histórico real do Firestore (sem exigir imagem).
+ * Histórico — listagem com filtros por status e origem.
  */
 export function HistoryScreen() {
   const { user } = useAuth();
+  const { colors } = useAppTheme();
   const [items, setItems] = useState<AnalysisRecord[]>([]);
+  const [filter, setFilter] = useState<HistoryFilter>('all');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,28 +119,53 @@ export function HistoryScreen() {
     }, [load]),
   );
 
+  const filteredItems = useMemo(
+    () => items.filter((item) => matchesFilter(item, filter)),
+    [items, filter],
+  );
+
   if (loading) {
-    return <LoadingState message="Carregando histórico..." />;
+    return (
+      <Container>
+        <LoadingState message="Carregando histórico..." />
+      </Container>
+    );
   }
 
   if (error) {
     return (
       <ErrorState
+        withContainer
         message={error}
+        actionLabel="Tentar novamente"
         onAction={() => {
           setLoading(true);
           void load();
         }}
+        secondaryActionLabel="Ir para início"
+        onSecondaryAction={() => router.replace('/(app)/' as Href)}
       />
     );
   }
 
   return (
     <Container scroll>
-      <View className="mb-8 mt-2 gap-2">
+      <View className="mb-6 mt-2 gap-2">
         <Heading>Histórico</Heading>
         <Body>Suas análises salvas, com status e riscos identificados.</Body>
       </View>
+
+      {items.length > 0 ? (
+        <View className="mb-5 gap-3">
+          <Label>Filtrar</Label>
+          <FilterChips options={FILTER_OPTIONS} value={filter} onChange={setFilter} />
+          <Caption>
+            {filteredItems.length}{' '}
+            {filteredItems.length === 1 ? 'registro' : 'registros'}
+            {filter !== 'all' ? ` · ${FILTER_OPTIONS.find((o) => o.value === filter)?.label}` : ''}
+          </Caption>
+        </View>
+      ) : null}
 
       {items.length === 0 ? (
         <View className="gap-4">
@@ -109,15 +175,22 @@ export function HistoryScreen() {
           />
           <Button label="Nova análise" onPress={() => router.push('/(app)/analysis' as Href)} />
         </View>
+      ) : filteredItems.length === 0 ? (
+        <View className="gap-4">
+          <EmptyState
+            title="Nenhum resultado neste filtro"
+            description="Tente outro tipo de histórico ou volte para Todas."
+          />
+          <Button label="Mostrar todas" variant="outline" onPress={() => setFilter('all')} />
+        </View>
       ) : (
         <View className="gap-3">
-          {items.map((item) => {
+          {filteredItems.map((item) => {
             const riskCount = item.result?.risks?.length ?? 0;
             return (
-              <Pressable
+              <Surface
                 key={item.id}
                 onPress={() => router.push(`/(app)/history/${item.id}` as Href)}
-                className="rounded-3xl border border-line bg-surface px-5 py-5 active:bg-canvas dark:border-line-dark dark:bg-surface-dark dark:active:bg-canvas-dark"
               >
                 <View className="flex-row items-start justify-between gap-2">
                   <View className="flex-1">
@@ -127,7 +200,7 @@ export function HistoryScreen() {
                       {item.localOnly ? ' · sem foto na nuvem' : ''}
                     </Caption>
                   </View>
-                  <Caption className="text-brand-dark dark:text-brand-accent">
+                  <Caption style={{ color: colors.brandDark }}>
                     {STATUS_LABEL[item.status]}
                   </Caption>
                 </View>
@@ -137,20 +210,22 @@ export function HistoryScreen() {
                     {riskCount} {riskCount === 1 ? 'risco' : 'riscos'}
                   </Caption>
                 </View>
-              </Pressable>
+              </Surface>
             );
           })}
-          <Pressable
+          <Surface
+            bordered={false}
+            tone="elevated"
+            className="mt-2"
             onPress={() => {
               setRefreshing(true);
               void load();
             }}
-            className="mt-2 py-3"
           >
-            <Caption className="text-center text-brand-dark">
+            <Caption className="text-center" style={{ color: colors.brandDark }}>
               {refreshing ? 'Atualizando…' : 'Atualizar lista'}
             </Caption>
-          </Pressable>
+          </Surface>
         </View>
       )}
     </Container>

@@ -1,6 +1,11 @@
 /**
- * Feature flags Sprint 4A — sem segredos.
- * Storage e OpenAI reais ficam desligados até billing/chaves do cliente.
+ * Feature flags — sem segredos no código.
+ *
+ * Análise do piloto: imagem **efêmera** (sem Firebase Storage).
+ * - EXPO_PUBLIC_AI_PROVIDER: mock | openai
+ * - EXPO_PUBLIC_AI_ANALYZE_URL: URL base da Netlify (ex.: https://site.netlify.app)
+ * - EXPO_PUBLIC_AI_MODEL: modelo Vision (default gpt-4o-mini)
+ * - OPENAI_API_KEY: só no .env / Netlify (via app.config extra no piloto; ideal só no servidor)
  */
 export type AiProviderFlag = 'mock' | 'openai';
 
@@ -14,7 +19,9 @@ export function getAiProvider(): AiProviderFlag {
   return raw === 'openai' ? 'openai' : 'mock';
 }
 
-/** Upload Storage — false enquanto billing do cliente não liberar. */
+/**
+ * Upload Storage — desligado no piloto (análise efêmera).
+ */
 export function isStorageUploadEnabled(): boolean {
   return readFlag('EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD', 'false').toLowerCase() === 'true';
 }
