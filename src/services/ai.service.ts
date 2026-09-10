@@ -1,4 +1,3 @@
-import { getAiProvider, isAiForceFailEnabled } from '@/lib/featureFlags';
 import type { AnalysisResult } from '@/lib/types';
 import { readLocalImageAsBase64 } from '@/src/services/ai/image';
 import {
@@ -8,23 +7,17 @@ import {
   getAnalyzeUrl,
   hasOpenAiCredentials,
 } from '@/src/services/ai/openai';
-import { buildMockAnalysisResult } from '@/src/services/mocks/analysis-result.mock';
 
 export type AnalyzeSituationImageInput = {
   /** URI local da sessão — não persistir; descartar após a análise. */
   localUri: string;
+  /** Contexto livre do inspetor para refinar a Vision. */
+  inspectorNote?: string;
 };
 
-const MOCK_DELAY_MS = 1500;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
- * Análise de situação (imagem efêmera).
- * - mock: fixture local
- * - openai: Vision (Netlify Function preferida; fallback direto no piloto)
+ * Análise de situação (imagem efêmera) via OpenAI Vision.
+ * Prefere Netlify Function; fallback direto no piloto local.
  */
 export async function analyzeSituationImage(
   input: AnalyzeSituationImageInput,
@@ -33,36 +26,24 @@ export async function analyzeSituationImage(
     throw new Error('AI_MISSING_IMAGE');
   }
 
-  const provider = getAiProvider();
-
-  if (provider === 'openai') {
-    if (!hasOpenAiCredentials()) {
-      throw new Error('AI_PROVIDER_NOT_READY');
-    }
-
-    const image = await readLocalImageAsBase64(input.localUri);
-    const model = getAiModel();
-    const endpoint = getAnalyzeUrl();
-
-    if (endpoint) {
-      return analyzeViaRemoteEndpoint(
-        { base64: image.base64, mimeType: image.mimeType, model },
-        endpoint,
-      );
-    }
-
-    return analyzeViaOpenAiDirect({
-      base64: image.base64,
-      mimeType: image.mimeType,
-      model,
-    });
+  if (!hasOpenAiCredentials()) {
+    throw new Error('AI_PROVIDER_NOT_READY');
   }
 
-  await delay(MOCK_DELAY_MS);
+  const image = await readLocalImageAsBase64(input.localUri);
+  const model = getAiModel();
+  const endpoint = getAnalyzeUrl();
+  const inspectorNote = input.inspectorNote?.trim() || undefined;
+  const payload = {
+    base64: image.base64,
+    mimeType: image.mimeType,
+    model,
+    inspectorNote,
+  };
 
-  if (isAiForceFailEnabled()) {
-    throw new Error('AI_MOCK_FORCED_FAIL');
+  if (endpoint) {
+    return analyzeViaRemoteEndpoint(payload, endpoint);
   }
 
-  return buildMockAnalysisResult();
+  return analyzeViaOpenAiDirect(payload);
 }

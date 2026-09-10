@@ -4,7 +4,7 @@ import { router, useLocalSearchParams, useFocusEffect, type Href } from 'expo-ro
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppTheme } from '@/contexts/ThemeContext';
-import type { AnalysisRecord, RiskSeverity } from '@/lib/types';
+import type { AnalysisConfidence, AnalysisRecord, RiskSeverity } from '@/lib/types';
 import {
   BackLink,
   Body,
@@ -24,6 +24,12 @@ const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   low: 'Baixa',
   medium: 'Média',
   high: 'Alta',
+};
+
+const CONFIDENCE_LABEL: Record<AnalysisConfidence, string> = {
+  high: 'Alta',
+  medium: 'Média',
+  low: 'Baixa',
 };
 
 /**
@@ -109,8 +115,36 @@ export function AnalysisDetailScreen() {
         </Surface>
       ) : null}
 
+      {record.inspectorNote ? (
+        <Surface tone="elevated" className="mb-4">
+          <Caption className="font-sansSemi">Contexto do inspetor</Caption>
+          <Body className="mt-2">{record.inspectorNote}</Body>
+        </Surface>
+      ) : null}
+
       {result ? (
         <View className="gap-4">
+          {result.needsInspectorReview ||
+          result.inspectorGuidance ||
+          (result.limitations && result.limitations.length > 0) ? (
+            <Surface tone="signal">
+              <Label>Atenção do inspetor</Label>
+              {result.overallConfidence ? (
+                <Caption className="mt-2">
+                  Confiança geral: {CONFIDENCE_LABEL[result.overallConfidence]}
+                </Caption>
+              ) : null}
+              {result.inspectorGuidance ? (
+                <Body className="mt-2">{result.inspectorGuidance}</Body>
+              ) : null}
+              {result.limitations?.map((item) => (
+                <Caption key={item} className="mt-1">
+                  • {item}
+                </Caption>
+              ))}
+            </Surface>
+          ) : null}
+
           <Surface>
             <Label>Riscos identificados</Label>
             <View className="mt-4 gap-4">
@@ -118,8 +152,14 @@ export function AnalysisDetailScreen() {
                 <View key={risk.id} className="gap-1">
                   <Label>
                     {risk.title} · {SEVERITY_LABEL[risk.severity]}
+                    {risk.confidence ? ` · conf. ${CONFIDENCE_LABEL[risk.confidence]}` : ''}
                   </Label>
                   <Caption>{risk.description}</Caption>
+                  {risk.uncertaintyNote ? (
+                    <Caption style={{ color: colors.signal }}>
+                      Verificar: {risk.uncertaintyNote}
+                    </Caption>
+                  ) : null}
                 </View>
               ))}
             </View>

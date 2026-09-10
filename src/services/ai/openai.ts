@@ -1,13 +1,14 @@
 import Constants from 'expo-constants';
 
 import type { AnalysisResult } from '@/lib/types';
-import { ANALYSIS_SYSTEM_PROMPT, ANALYSIS_USER_TEXT } from '@/src/services/ai/prompt';
+import { ANALYSIS_SYSTEM_PROMPT, buildAnalysisUserText } from '@/src/services/ai/prompt';
 import { extractJsonObject, toAnalysisResult } from '@/src/services/ai/parse-result';
 
 type AnalyzeWithOpenAiInput = {
   base64: string;
   mimeType: string;
   model: string;
+  inspectorNote?: string;
 };
 
 type OpenAiErrorBody = {
@@ -57,7 +58,6 @@ function getClientApiKey(): string {
   const extra = Constants.expoConfig?.extra as { openaiApiKey?: string } | undefined;
   const fromExtra = typeof extra?.openaiApiKey === 'string' ? extra.openaiApiKey.trim() : '';
   if (fromExtra) return fromExtra.replace(/^\uFEFF/, '');
-  // Fallback: alguns setups Expo exportam no process.env do bundle
   const fromEnv = process.env.OPENAI_API_KEY?.trim() ?? '';
   return fromEnv.replace(/^\uFEFF/, '');
 }
@@ -95,6 +95,7 @@ export async function analyzeViaRemoteEndpoint(
       imageBase64: input.base64,
       mimeType: input.mimeType,
       model: input.model,
+      inspectorNote: input.inspectorNote,
     }),
   });
 
@@ -141,6 +142,7 @@ export async function analyzeViaOpenAiDirect(
   }
 
   const dataUrl = `data:${input.mimeType};base64,${input.base64}`;
+  const userText = buildAnalysisUserText(input.inspectorNote);
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -151,15 +153,15 @@ export async function analyzeViaOpenAiDirect(
     body: JSON.stringify({
       model: input.model,
       temperature: 0.2,
-      max_tokens: 1200,
+      max_tokens: 1600,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
-            { type: 'text', text: ANALYSIS_USER_TEXT },
-            { type: 'image_url', image_url: { url: dataUrl, detail: 'low' } },
+            { type: 'text', text: userText },
+            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
           ],
         },
       ],

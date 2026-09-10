@@ -68,7 +68,7 @@ App **aberto ao público** (não restrito à empresa do cliente).
 ## Funcionalidades core (piloto)
 
 ### 1. Análise de ambiente com IA
-Captura → preview local → análise (mock hoje; GPT na 4B) → riscos → medidas → NRs. Sem persistir a foto.
+Captura → preview local → análise OpenAI Vision → riscos → medidas → NRs (+ incerteza / reanálise com contexto). Sem persistir a foto.
 
 ### 2. Biblioteca SST
 Checklists, Ordens de Serviço, NRs, planilhas SST — catálogo/resumos no app (6A).
@@ -90,7 +90,7 @@ Totais de usuários, acessos, acessos/dia, indicadores e gráficos (11A).
 2. Selecionar análise  
 3. Foto (câmera) ou imagem (galeria) — só no aparelho  
 4. Confirmar preview  
-5. IA analisa (bytes temporários na 4B; mock na 4A)  
+5. IA analisa (OpenAI Vision; bytes temporários; reanálise com contexto do inspetor)  
 6. Retorno dos riscos / controles / NRs  
 7. Registro no Firestore **sem** `imageUrl`  
 8. Descarte da URI local  

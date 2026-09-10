@@ -1,4 +1,5 @@
 export type Severity = 'low' | 'medium' | 'high';
+export type Confidence = 'high' | 'medium' | 'low';
 
 export type ParsedAnalysisPayload = {
   risks: Array<{
@@ -6,6 +7,8 @@ export type ParsedAnalysisPayload = {
     title: string;
     description: string;
     severity: Severity;
+    confidence?: Confidence;
+    uncertaintyNote?: string;
   }>;
   controls: Array<{
     riskId: string;
@@ -16,6 +19,10 @@ export type ParsedAnalysisPayload = {
     title: string;
     relevance: string;
   }>;
+  overallConfidence?: Confidence;
+  needsInspectorReview?: boolean;
+  inspectorGuidance?: string;
+  limitations?: string[];
 };
 
 function asString(value: unknown, fallback = ''): string {
@@ -25,6 +32,18 @@ function asString(value: unknown, fallback = ''): string {
 function asSeverity(value: unknown): Severity {
   if (value === 'low' || value === 'medium' || value === 'high') return value;
   return 'medium';
+}
+
+function asConfidence(value: unknown): Confidence | undefined {
+  if (value === 'high' || value === 'medium' || value === 'low') return value;
+  return undefined;
+}
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asString(item))
+    .filter((item) => item.length > 0);
 }
 
 /** Extrai JSON de resposta do modelo (aceita cercas ```json). */
@@ -63,11 +82,15 @@ export function parseAnalysisPayload(raw: unknown): ParsedAnalysisPayload {
   const risks = risksIn.map((item, index) => {
     const row = (item ?? {}) as Record<string, unknown>;
     const id = asString(row.id, `risk-${index + 1}`);
+    const confidence = asConfidence(row.confidence);
+    const uncertaintyNote = asString(row.uncertaintyNote);
     return {
       id,
       title: asString(row.title, `Risco ${index + 1}`),
       description: asString(row.description, 'Descrição não informada.'),
       severity: asSeverity(row.severity),
+      ...(confidence ? { confidence } : {}),
+      ...(uncertaintyNote ? { uncertaintyNote } : {}),
     };
   });
 
@@ -100,6 +123,16 @@ export function parseAnalysisPayload(raw: unknown): ParsedAnalysisPayload {
     })
     .filter((n): n is { code: string; title: string; relevance: string } => n !== null);
 
+  const overallConfidence = asConfidence(data.overallConfidence);
+  const inspectorGuidance = asString(data.inspectorGuidance);
+  const limitations = asStringList(data.limitations);
+  const needsInspectorReview =
+    typeof data.needsInspectorReview === 'boolean'
+      ? data.needsInspectorReview
+      : overallConfidence === 'low' ||
+        risks.some((r) => r.confidence === 'low') ||
+        limitations.length > 0;
+
   return {
     risks,
     controls:
@@ -110,5 +143,9 @@ export function parseAnalysisPayload(raw: unknown): ParsedAnalysisPayload {
             measure: 'Avaliar controles aplicáveis com a equipe de SST no local.',
           })),
     nrs,
+    ...(overallConfidence ? { overallConfidence } : {}),
+    needsInspectorReview,
+    ...(inspectorGuidance ? { inspectorGuidance } : {}),
+    ...(limitations.length > 0 ? { limitations } : {}),
   };
 }

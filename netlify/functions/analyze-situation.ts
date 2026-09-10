@@ -2,7 +2,7 @@ import type { Config, Context } from '@netlify/functions';
 
 import {
   ANALYSIS_SYSTEM_PROMPT,
-  ANALYSIS_USER_TEXT,
+  buildAnalysisUserText,
 } from './_shared/analysis-prompt';
 import { extractJsonObject, parseAnalysisPayload } from './_shared/parse-analysis';
 
@@ -10,6 +10,7 @@ type Body = {
   imageBase64?: string;
   mimeType?: string;
   model?: string;
+  inspectorNote?: string;
 };
 
 function json(status: number, payload: unknown) {
@@ -38,7 +39,7 @@ function getOpenAiKey(): string | undefined {
 
 /**
  * POST /api/analyze-situation
- * Body: { imageBase64, mimeType?, model? }
+ * Body: { imageBase64, mimeType?, model?, inspectorNote? }
  * A imagem é usada só nesta request — não armazenada.
  */
 export default async (req: Request, _context: Context) => {
@@ -59,7 +60,10 @@ export default async (req: Request, _context: Context) => {
 
   const apiKey = getOpenAiKey();
   if (!apiKey) {
-    return json(503, { error: 'AI_PROVIDER_NOT_READY', message: 'OPENAI_API_KEY ausente no servidor.' });
+    return json(503, {
+      error: 'AI_PROVIDER_NOT_READY',
+      message: 'OPENAI_API_KEY ausente no servidor.',
+    });
   }
 
   let body: Body;
@@ -82,8 +86,11 @@ export default async (req: Request, _context: Context) => {
     (typeof body.model === 'string' && body.model.trim()) ||
     process.env.OPENAI_MODEL ||
     'gpt-4o-mini';
+  const inspectorNote =
+    typeof body.inspectorNote === 'string' ? body.inspectorNote.trim() : '';
 
   const dataUrl = `data:${mimeType};base64,${imageBase64}`;
+  const userText = buildAnalysisUserText(inspectorNote || undefined);
 
   const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -94,13 +101,14 @@ export default async (req: Request, _context: Context) => {
     body: JSON.stringify({
       model,
       temperature: 0.2,
+      max_tokens: 1600,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
         {
           role: 'user',
           content: [
-            { type: 'text', text: ANALYSIS_USER_TEXT },
+            { type: 'text', text: userText },
             { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
           ],
         },

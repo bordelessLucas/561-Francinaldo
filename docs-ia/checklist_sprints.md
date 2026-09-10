@@ -53,14 +53,14 @@
 ---
 
 ## Sprint 4 — Análise com IA (risco + controle + NRs)
-- [x] Integração com provedor de visão/IA (definir e documentar) — alvo **GPT**; runtime **mock**  
+- [x] Integração com provedor de visão/IA (definir e documentar) — **OpenAI Vision** (sem mock no fluxo oficial)  
 - [x] Envio da imagem para análise — local/sessão (**sem Storage**)  
-- [x] Retorno estruturado: riscos identificados  
+- [x] Retorno estruturado: riscos identificados (+ confiança / dúvida por risco)  
 - [x] Medidas de controle por risco  
-- [x] Relacionamento com NRs aplicáveis — heurística no mock  
-- [x] Tela de resultado clara e acionável  
+- [x] Relacionamento com NRs aplicáveis — incl. NR-22 e correlatas quando pertinente  
+- [x] Tela de resultado clara e acionável (+ aviso ao inspetor)  
 - [x] Tratamento de falha / timeout / imagem inválida  
-- [x] **4B:** OpenAI Vision **efêmero** (bytes locais → JSON; descartar imagem; **sem** Storage) — adapter + Netlify Function; chave no `.env` / Netlify  
+- [x] **4B:** OpenAI Vision **efêmero** + reanálise com mensagem do inspetor; chave no `.env` / Netlify  
 
 ---
 

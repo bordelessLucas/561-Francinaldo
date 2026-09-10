@@ -1,4 +1,8 @@
-import type { AnalysisResult, RiskSeverity } from '@/lib/types';
+import type {
+  AnalysisConfidence,
+  AnalysisResult,
+  RiskSeverity,
+} from '@/lib/types';
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value.trim() : fallback;
@@ -7,6 +11,18 @@ function asString(value: unknown, fallback = ''): string {
 function asSeverity(value: unknown): RiskSeverity {
   if (value === 'low' || value === 'medium' || value === 'high') return value;
   return 'medium';
+}
+
+function asConfidence(value: unknown): AnalysisConfidence | undefined {
+  if (value === 'high' || value === 'medium' || value === 'low') return value;
+  return undefined;
+}
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asString(item))
+    .filter((item) => item.length > 0);
 }
 
 export function extractJsonObject(raw: string): unknown {
@@ -47,11 +63,15 @@ export function toAnalysisResult(
 
   const risks = risksIn.map((item, index) => {
     const row = (item ?? {}) as Record<string, unknown>;
+    const confidence = asConfidence(row.confidence);
+    const uncertaintyNote = asString(row.uncertaintyNote);
     return {
       id: asString(row.id, `risk-${index + 1}`),
       title: asString(row.title, `Risco ${index + 1}`),
       description: asString(row.description, 'Descrição não informada.'),
       severity: asSeverity(row.severity),
+      ...(confidence ? { confidence } : {}),
+      ...(uncertaintyNote ? { uncertaintyNote } : {}),
     };
   });
 
@@ -84,8 +104,16 @@ export function toAnalysisResult(
     })
     .filter((n): n is { code: string; title: string; relevance: string } => n !== null);
 
-  const analyzedAt =
-    asString(data.analyzedAt) || new Date().toISOString();
+  const analyzedAt = asString(data.analyzedAt) || new Date().toISOString();
+  const overallConfidence = asConfidence(data.overallConfidence);
+  const inspectorGuidance = asString(data.inspectorGuidance);
+  const limitations = asStringList(data.limitations);
+  const needsInspectorReview =
+    typeof data.needsInspectorReview === 'boolean'
+      ? data.needsInspectorReview
+      : overallConfidence === 'low' ||
+        risks.some((r) => r.confidence === 'low') ||
+        limitations.length > 0;
 
   return {
     provider: 'openai',
@@ -100,5 +128,9 @@ export function toAnalysisResult(
             measure: 'Avaliar controles aplicáveis com a equipe de SST no local.',
           })),
     nrs,
+    ...(overallConfidence ? { overallConfidence } : {}),
+    needsInspectorReview,
+    ...(inspectorGuidance ? { inspectorGuidance } : {}),
+    ...(limitations.length > 0 ? { limitations } : {}),
   };
 }

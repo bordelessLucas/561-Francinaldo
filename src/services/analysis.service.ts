@@ -48,6 +48,10 @@ export function mapAnalysis(id: string, data: DocumentData): AnalysisRecord {
     result: data.result as AnalysisResult | undefined,
     errorMessage: typeof data.errorMessage === 'string' ? data.errorMessage : undefined,
     localOnly: typeof data.localOnly === 'boolean' ? data.localOnly : undefined,
+    inspectorNote:
+      typeof data.inspectorNote === 'string' && data.inspectorNote.trim()
+        ? data.inspectorNote.trim()
+        : undefined,
   };
 }
 
@@ -136,10 +140,12 @@ export type RunAnalysisWithoutUploadInput = {
   uid: string;
   localUri: string;
   source: AnalysisSource;
+  /** Contexto livre do inspetor (reanálise / complemento). */
+  inspectorNote?: string;
 };
 
 /**
- * Fluxo oficial do piloto: pending → analyzing → IA → done|failed.
+ * Fluxo oficial: pending → analyzing → OpenAI Vision → done|failed.
  * Imagem efêmera (`localOnly: true`); sem upload Storage; Firestore só texto/`result`.
  */
 export async function runAnalysisWithoutUpload(
@@ -148,6 +154,7 @@ export async function runAnalysisWithoutUpload(
   const analysisRef = doc(collection(db, 'analyses'));
   const analysisId = analysisRef.id;
   const now = new Date().toISOString();
+  const inspectorNote = input.inspectorNote?.trim() || undefined;
 
   await setDoc(analysisRef, {
     uid: input.uid,
@@ -158,6 +165,7 @@ export async function runAnalysisWithoutUpload(
     createdAt: now,
     updatedAt: now,
     localOnly: true,
+    ...(inspectorNote ? { inspectorNote } : {}),
   });
 
   await updateDoc(analysisRef, {
@@ -166,7 +174,10 @@ export async function runAnalysisWithoutUpload(
   });
 
   try {
-    const result = await analyzeSituationImage({ localUri: input.localUri });
+    const result = await analyzeSituationImage({
+      localUri: input.localUri,
+      inspectorNote,
+    });
     const updatedAt = new Date().toISOString();
 
     await updateDoc(analysisRef, {
@@ -174,6 +185,7 @@ export async function runAnalysisWithoutUpload(
       result,
       errorMessage: null,
       updatedAt,
+      ...(inspectorNote ? { inspectorNote } : {}),
     });
 
     return mapAnalysis(analysisId, {
@@ -186,6 +198,7 @@ export async function runAnalysisWithoutUpload(
       updatedAt,
       result,
       localOnly: true,
+      ...(inspectorNote ? { inspectorNote } : {}),
     });
   } catch (error) {
     const updatedAt = new Date().toISOString();
@@ -209,6 +222,7 @@ export async function runAnalysisWithoutUpload(
       updatedAt,
       errorMessage,
       localOnly: true,
+      ...(inspectorNote ? { inspectorNote } : {}),
     };
 
     throw Object.assign(error instanceof Error ? error : new Error(errorMessage), {
