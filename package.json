@@ -56,7 +56,8 @@
   "overrides": {
     "jiti": "1.21.7",
     "react-native-css-interop": "0.2.6",
-    "expo": "57.0.21"
+    "expo": "57.0.21",
+    "@react-native-async-storage/async-storage": "2.2.0"
   },
   "private": true
 }

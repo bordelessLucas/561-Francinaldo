@@ -9,13 +9,15 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "node": "22.14.0"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
+      "node": "22.14.0",
       "env": {
         "EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD": "false",
         "EXPO_PUBLIC_AI_MODEL": "gpt-4o-mini"
@@ -26,6 +28,7 @@
       "android": {
         "buildType": "app-bundle"
       },
+      "node": "22.14.0",
       "env": {
         "EXPO_PUBLIC_ENABLE_STORAGE_UPLOAD": "false",
         "EXPO_PUBLIC_AI_MODEL": "gpt-4o-mini"
