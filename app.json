@@ -1,12 +1,13 @@
 {
   "expo": {
     "name": "Alpha SST",
-    "slug": "alpha-sst",
+    "slug": "alphasst",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "alphasst",
     "userInterfaceStyle": "automatic",
+    "owner": "borderlesspc12",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.francinaldo.alphasst",
@@ -64,6 +65,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "aiAnalyzeUrl": "",
+      "openaiApiKey": "",
+      "router": {},
+      "eas": {
+        "projectId": "f9b70406-8803-4e80-aa9a-403732ef3c68"
+      }
     }
   }
 }
