@@ -4,6 +4,7 @@ import { Pressable, View } from 'react-native';
 
 import { BrandMark } from '@/components/ui/BrandMark';
 import { LoadingState } from '@/components/ui/LoadingState';
+import { brand } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button, Container, Heading, Body, Input, Caption } from '@/src/components';
 
@@ -91,7 +92,7 @@ export function LoginScreen() {
   return (
     <Container scroll keyboard>
       <View className="mb-10 mt-4 items-center">
-        <BrandMark size="lg" showTagline />
+        <BrandMark size="lg" showTagline logoSource={brand.logoV2} />
       </View>
 
       <View className="mb-8 gap-2">

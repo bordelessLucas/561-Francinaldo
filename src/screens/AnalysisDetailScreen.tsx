@@ -125,6 +125,8 @@ export function AnalysisDetailScreen() {
       {result ? (
         <View className="gap-4">
           {result.needsInspectorReview ||
+          result.overallConfidence === 'low' ||
+          result.overallConfidence === 'medium' ||
           result.inspectorGuidance ||
           (result.limitations && result.limitations.length > 0) ? (
             <Surface tone="signal">
@@ -186,8 +188,8 @@ export function AnalysisDetailScreen() {
           <Surface>
             <Label>NRs relacionadas</Label>
             <View className="mt-4 gap-3">
-              {result.nrs.map((nr) => (
-                <View key={nr.code} className="gap-1">
+              {result.nrs.map((nr, index) => (
+                <View key={`${nr.code}-${index}`} className="gap-1">
                   <Label>
                     {nr.code} — {nr.title}
                   </Label>

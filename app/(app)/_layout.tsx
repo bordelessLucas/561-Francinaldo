@@ -106,7 +106,9 @@ export default function AppLayout() {
 
   const active = colors.brand;
   const inactive = colors.tabInactive;
-  const tabBarHeight = 64 + Math.max(insets.bottom, 8);
+  // Extra margem além do inset: Samsung/nav clássica às vezes colide com a tab bar.
+  const tabBarBottomPad = Math.max(insets.bottom, 12) + 10;
+  const tabBarHeight = 64 + tabBarBottomPad;
 
   return (
     <Tabs
@@ -120,7 +122,7 @@ export default function AppLayout() {
           borderTopWidth: 1,
           height: tabBarHeight,
           paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 8),
+          paddingBottom: tabBarBottomPad,
         },
         tabBarLabelStyle: {
           fontSize: 11,

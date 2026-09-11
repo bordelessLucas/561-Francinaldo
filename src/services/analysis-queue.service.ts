@@ -17,6 +17,8 @@ export type RunAnalysisQueueInput = {
   uid: string;
   items: Array<{ localUri: string; source: AnalysisSource }>;
   inspectorNote?: string;
+  /** Retorne false para parar antes do próximo item (cancelamento da UI). */
+  shouldContinue?: () => boolean;
   onProgress?: (snapshot: {
     index: number;
     total: number;
@@ -49,6 +51,10 @@ export async function runAnalysisQueue(
   }));
 
   for (let index = 0; index < queue.length; index += 1) {
+    if (input.shouldContinue && !input.shouldContinue()) {
+      break;
+    }
+
     const current = queue[index];
     current.status = 'analyzing';
     input.onProgress?.({
@@ -65,10 +71,18 @@ export async function runAnalysisQueue(
         source: current.source,
         inspectorNote: input.inspectorNote,
       });
+
+      if (input.shouldContinue && !input.shouldContinue()) {
+        break;
+      }
+
       current.status = 'done';
       current.analysisId = record.id;
       current.result = record.result;
     } catch (error) {
+      if (input.shouldContinue && !input.shouldContinue()) {
+        break;
+      }
       current.status = 'failed';
       current.errorMessage =
         error instanceof Error ? error.message : 'AI_ANALYSIS_FAILED';

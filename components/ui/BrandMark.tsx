@@ -1,4 +1,4 @@
-import { Image, Text, View } from 'react-native';
+import { Image, ImageSourcePropType, Text, View } from 'react-native';
 
 import { brand } from '@/constants/theme';
 
@@ -6,6 +6,8 @@ type BrandMarkProps = {
   size?: 'sm' | 'md' | 'lg';
   showTagline?: boolean;
   showName?: boolean;
+  /** Override do asset (ex.: logo_v2 só no login). Default: logo oficial completa. */
+  logoSource?: ImageSourcePropType;
   /** Compat legado: mantido por API, sem forcar fundo escuro na UI atual. */
   onDarkPlate?: boolean;
 };
@@ -14,6 +16,8 @@ const LOGO_SIZE = {
   sm: 40,
   md: 72,
   lg: 128,
+  /** Login: símbolo um pouco maior (logo_v2 sem texto). */
+  login: 148,
 } as const;
 
 /** Marca Alpha SST — logo oficial + tipografia. */
@@ -21,16 +25,17 @@ export function BrandMark({
   size = 'lg',
   showTagline = false,
   showName = true,
+  logoSource,
   onDarkPlate: _onDarkPlate = false,
 }: BrandMarkProps) {
-  const logoSize = LOGO_SIZE[size];
+  const logoSize = size === 'lg' && logoSource ? LOGO_SIZE.login : LOGO_SIZE[size];
   const isLarge = size === 'lg';
 
   return (
     <View className={isLarge ? 'items-center gap-3' : 'flex-row items-center gap-3'}>
       <View className="items-center">
         <Image
-          source={brand.logo}
+          source={logoSource ?? brand.logo}
           style={{ width: logoSize, height: logoSize }}
           resizeMode="contain"
           accessibilityLabel="Logo Alpha SST"

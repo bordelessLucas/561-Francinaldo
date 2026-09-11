@@ -19,6 +19,9 @@ function json(status: number, payload: unknown) {
     headers: {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-store',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
 }
@@ -92,29 +95,35 @@ export default async (req: Request, _context: Context) => {
   const dataUrl = `data:${mimeType};base64,${imageBase64}`;
   const userText = buildAnalysisUserText(inspectorNote || undefined);
 
-  const openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 1600,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userText },
-            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-          ],
-        },
-      ],
-    }),
-  });
+  let openAiRes: Response;
+  try {
+    openAiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        max_tokens: 1600,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: userText },
+              { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    console.error('OpenAI network error', err);
+    return json(502, { error: 'AI_UPSTREAM_ERROR' });
+  }
 
   if (!openAiRes.ok) {
     const errText = await openAiRes.text();
@@ -167,7 +176,11 @@ export default async (req: Request, _context: Context) => {
     });
   } catch (err) {
     console.error('Parse analysis failed', err);
-    return json(502, { error: 'AI_INVALID_PAYLOAD' });
+    const code =
+      err instanceof Error && err.message.startsWith('AI_')
+        ? err.message
+        : 'AI_INVALID_PAYLOAD';
+    return json(502, { error: code });
   }
 };
 

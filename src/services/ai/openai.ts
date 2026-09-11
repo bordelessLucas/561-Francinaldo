@@ -79,25 +79,35 @@ export function hasOpenAiCredentials(): boolean {
   return Boolean(getAnalyzeUrl() || getClientApiKey());
 }
 
+function resolveAnalyzeEndpoint(endpoint: string): string {
+  const base = endpoint.replace(/\/$/, '');
+  if (base.endsWith('/analyze-situation')) return base;
+  if (base.endsWith('/api')) return `${base}/analyze-situation`;
+  return `${base}/api/analyze-situation`;
+}
+
 /** Preferência: Netlify Function /api/analyze-situation (chave só no servidor). */
 export async function analyzeViaRemoteEndpoint(
   input: AnalyzeWithOpenAiInput,
   endpoint: string,
 ): Promise<AnalysisResult> {
-  const url = endpoint.endsWith('/analyze-situation')
-    ? endpoint
-    : `${endpoint}/api/analyze-situation`;
+  const url = resolveAnalyzeEndpoint(endpoint);
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      imageBase64: input.base64,
-      mimeType: input.mimeType,
-      model: input.model,
-      inspectorNote: input.inspectorNote,
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imageBase64: input.base64,
+        mimeType: input.mimeType,
+        model: input.model,
+        inspectorNote: input.inspectorNote,
+      }),
+    });
+  } catch {
+    throw new Error('AI_NETWORK_ERROR');
+  }
 
   const raw = await res.text();
   let payload: unknown = {};
@@ -114,13 +124,7 @@ export async function analyzeViaRemoteEndpoint(
       typeof (payload as { error?: string }).error === 'string'
         ? (payload as { error: string }).error
         : '';
-    if (
-      errCode === 'AI_PROVIDER_NOT_READY' ||
-      errCode === 'AI_MISSING_IMAGE' ||
-      errCode === 'AI_QUOTA_EXCEEDED' ||
-      errCode === 'AI_AUTH_FAILED' ||
-      errCode === 'AI_BAD_IMAGE'
-    ) {
+    if (errCode.startsWith('AI_')) {
       throw new Error(errCode);
     }
     throw mapOpenAiHttpError(res.status, raw);
@@ -144,29 +148,34 @@ export async function analyzeViaOpenAiDirect(
   const dataUrl = `data:${input.mimeType};base64,${input.base64}`;
   const userText = buildAnalysisUserText(input.inspectorNote);
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: 0.2,
-      max_tokens: 1600,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: userText },
-            { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
-          ],
-        },
-      ],
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: input.model,
+        temperature: 0.2,
+        max_tokens: 1600,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: userText },
+              { type: 'image_url', image_url: { url: dataUrl, detail: 'high' } },
+            ],
+          },
+        ],
+      }),
+    });
+  } catch {
+    throw new Error('AI_NETWORK_ERROR');
+  }
 
   const raw = await res.text();
   if (!res.ok) {

@@ -70,6 +70,8 @@ export const brand = {
   name: 'Alpha SST',
   tagline: 'Segurança e saúde no trabalho em campo',
   logo: require('@/assets/brand/alpha-sst-logo.png'),
+  /** Símbolo sem texto — uso no login (evita "Alpha SST" duplicado). */
+  logoV2: require('@/assets/brand/logo_v2.png'),
 } as const;
 
 export function getColors(scheme: 'light' | 'dark' | null | undefined): AppColors {

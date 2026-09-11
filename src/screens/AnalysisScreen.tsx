@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -79,6 +79,10 @@ function getCaptureErrorMessage(error: unknown): string {
         return 'A conta OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
       case 'AI_BAD_IMAGE':
         return 'A imagem não pôde ser analisada. Tente outra foto (boa iluminação, JPEG).';
+      case 'AI_BAD_REQUEST':
+        return 'Pedido de análise inválido. Tente novamente com outra foto.';
+      case 'AI_NETWORK_ERROR':
+        return 'Falha de rede ao falar com a IA. Verifique a conexão e tente de novo.';
       case 'AI_UPSTREAM_ERROR':
         return 'O provedor de IA não respondeu corretamente. Tente novamente em instantes.';
       case 'AI_INVALID_JSON':
@@ -139,6 +143,7 @@ export function AnalysisScreen() {
   const [lastInspectorNote, setLastInspectorNote] = useState<string | null>(null);
   const [queueItems, setQueueItems] = useState<AnalysisQueueItem[]>([]);
   const [queueProgress, setQueueProgress] = useState({ index: 0, total: 0 });
+  const analysisRunIdRef = useRef(0);
 
   const remainingSlots = MAX_ANALYSIS_BATCH - batch.length;
   const activePhoto = batch[activeIndex] ?? batch[0] ?? null;
@@ -150,6 +155,7 @@ export function AnalysisScreen() {
   }, [queueItems]);
 
   const resetSession = useCallback(() => {
+    analysisRunIdRef.current += 1;
     setBatch([]);
     setActiveIndex(0);
     setResult(null);
@@ -249,6 +255,7 @@ export function AnalysisScreen() {
     }
 
     const note = inspectorNote.trim() || undefined;
+    const runId = ++analysisRunIdRef.current;
     setError(null);
     setStep('analyzing');
     setQueueProgress({ index: 0, total: batch.length });
@@ -266,11 +273,15 @@ export function AnalysisScreen() {
         uid: user.uid,
         items: batch,
         inspectorNote: note,
+        shouldContinue: () => analysisRunIdRef.current === runId,
         onProgress: ({ index, total, items }) => {
+          if (analysisRunIdRef.current !== runId) return;
           setQueueProgress({ index, total });
           setQueueItems(items);
         },
       });
+
+      if (analysisRunIdRef.current !== runId) return;
 
       setQueueItems(finished);
       setLastInspectorNote(note ?? null);
@@ -296,6 +307,7 @@ export function AnalysisScreen() {
 
       setStep('batch_result');
     } catch (err) {
+      if (analysisRunIdRef.current !== runId) return;
       setError(getCaptureErrorMessage(err));
       setStep('error');
     }
@@ -313,6 +325,7 @@ export function AnalysisScreen() {
     }
 
     setError(null);
+    const runId = ++analysisRunIdRef.current;
     setStep('analyzing');
     setQueueProgress({ index: 0, total: 1 });
     try {
@@ -322,6 +335,7 @@ export function AnalysisScreen() {
         source: sessionSource,
         inspectorNote: inspectorNote.trim(),
       });
+      if (analysisRunIdRef.current !== runId) return;
       setResult(record.result ?? null);
       setSavedId(record.id);
       setLastInspectorNote(inspectorNote.trim());
@@ -337,6 +351,7 @@ export function AnalysisScreen() {
       ]);
       setStep('result');
     } catch (err) {
+      if (analysisRunIdRef.current !== runId) return;
       setError(getCaptureErrorMessage(err));
       setStep('error');
     }
@@ -348,6 +363,7 @@ export function AnalysisScreen() {
     if (failed.length === 0) return;
 
     const note = inspectorNote.trim() || lastInspectorNote || undefined;
+    const runId = ++analysisRunIdRef.current;
     setError(null);
     setStep('analyzing');
 
@@ -361,7 +377,9 @@ export function AnalysisScreen() {
         uid: user.uid,
         items: retryInput,
         inspectorNote: note,
+        shouldContinue: () => analysisRunIdRef.current === runId,
         onProgress: ({ index, total, items }) => {
+          if (analysisRunIdRef.current !== runId) return;
           setQueueProgress({ index, total });
           setQueueItems((prev) => {
             const byUri = new Map(items.map((item) => [item.localUri, item]));
@@ -370,6 +388,8 @@ export function AnalysisScreen() {
         },
       });
 
+      if (analysisRunIdRef.current !== runId) return;
+
       setQueueItems((prev) => {
         const byUri = new Map(finished.map((item) => [item.localUri, item]));
         return prev.map((item) => byUri.get(item.localUri) ?? item);
@@ -377,6 +397,7 @@ export function AnalysisScreen() {
       setLastInspectorNote(note ?? null);
       setStep('batch_result');
     } catch (err) {
+      if (analysisRunIdRef.current !== runId) return;
       setError(getCaptureErrorMessage(err));
       setStep('error');
     }
@@ -696,8 +717,8 @@ export function AnalysisScreen() {
           <Surface>
             <Label>NRs relacionadas</Label>
             <View className="mt-4 gap-3">
-              {result.nrs.map((nr) => (
-                <View key={nr.code} className="gap-1">
+              {result.nrs.map((nr, index) => (
+                <View key={`${nr.code}-${index}`} className="gap-1">
                   <Label>
                     {nr.code} — {nr.title}
                   </Label>
