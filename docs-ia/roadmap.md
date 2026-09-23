@@ -45,11 +45,12 @@ Camera/Galeria → Preview (+ contexto opcional) → OpenAI Vision → Firestore
 
 | Ordem | Sprint | Depende de |
 |-------|--------|------------|
-| **Agora** | Validar fotos reais em campo + afinar prompt | Créditos OpenAI |
-| **1** | **11A** — Admin shell (métricas básicas) | Role admin |
-| **2** | Conteúdo cliente (checklists/OS/NRs oficiais) | Lista do cliente |
-| **3** | **9B** — Disparo push quando NR atualizar | Fonte do cliente + preferencialmente dev build |
-| **4** | **10B** — Pagamento Premium | Preço/regras + provedor |
+| **Agora** | IA assertiva + base NR completa + RAG | Fonte oficial MTE + backend OpenAI |
+| **1** | Voz antes do envio da foto + ajustes UI cliente | Sprint IA/RAG estabilizada |
+| **2** | **11A** — Admin shell (métricas básicas) | Role admin |
+| **3** | Conteúdo cliente (checklists/OS/planilhas oficiais) | Lista do cliente |
+| **4** | **9B** — Disparo push quando NR atualizar | Fonte do cliente + preferencialmente dev build |
+| **5** | **10B** — Pagamento Premium | Preço/regras + provedor |
 | Final | **12** — Polimento + Play | Contas do cliente |
 
 ### Sprint 4B — GPT Vision efêmera

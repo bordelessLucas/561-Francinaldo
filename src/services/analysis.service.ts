@@ -52,6 +52,8 @@ export function mapAnalysis(id: string, data: DocumentData): AnalysisRecord {
       typeof data.inspectorNote === 'string' && data.inspectorNote.trim()
         ? data.inspectorNote.trim()
         : undefined,
+    reportRequested:
+      typeof data.reportRequested === 'boolean' ? data.reportRequested : undefined,
   };
 }
 
@@ -142,6 +144,7 @@ export type RunAnalysisWithoutUploadInput = {
   source: AnalysisSource;
   /** Contexto livre do inspetor (reanálise / complemento). */
   inspectorNote?: string;
+  generateReport?: boolean;
 };
 
 /**
@@ -155,6 +158,7 @@ export async function runAnalysisWithoutUpload(
   const analysisId = analysisRef.id;
   const now = new Date().toISOString();
   const inspectorNote = input.inspectorNote?.trim() || undefined;
+  const reportRequested = Boolean(input.generateReport);
 
   await setDoc(analysisRef, {
     uid: input.uid,
@@ -165,6 +169,7 @@ export async function runAnalysisWithoutUpload(
     createdAt: now,
     updatedAt: now,
     localOnly: true,
+    reportRequested,
     ...(inspectorNote ? { inspectorNote } : {}),
   });
 
@@ -177,6 +182,7 @@ export async function runAnalysisWithoutUpload(
     const result = await analyzeSituationImage({
       localUri: input.localUri,
       inspectorNote,
+      generateReport: reportRequested,
     });
     const updatedAt = new Date().toISOString();
 
@@ -185,6 +191,7 @@ export async function runAnalysisWithoutUpload(
       result,
       errorMessage: null,
       updatedAt,
+      reportRequested,
       ...(inspectorNote ? { inspectorNote } : {}),
     });
 
@@ -198,6 +205,7 @@ export async function runAnalysisWithoutUpload(
       updatedAt,
       result,
       localOnly: true,
+      reportRequested,
       ...(inspectorNote ? { inspectorNote } : {}),
     });
   } catch (error) {
@@ -222,6 +230,7 @@ export async function runAnalysisWithoutUpload(
       updatedAt,
       errorMessage,
       localOnly: true,
+      reportRequested,
       ...(inspectorNote ? { inspectorNote } : {}),
     };
 

@@ -9,6 +9,7 @@ type AnalyzeWithOpenAiInput = {
   mimeType: string;
   model: string;
   inspectorNote?: string;
+  generateReport?: boolean;
 };
 
 type OpenAiErrorBody = {
@@ -54,7 +55,7 @@ export function mapOpenAiHttpError(status: number, bodyText: string): Error {
   return new Error('AI_UPSTREAM_ERROR');
 }
 
-function getClientApiKey(): string {
+export function getClientApiKey(): string {
   const extra = Constants.expoConfig?.extra as { openaiApiKey?: string } | undefined;
   const fromExtra = typeof extra?.openaiApiKey === 'string' ? extra.openaiApiKey.trim() : '';
   if (fromExtra) return fromExtra.replace(/^\uFEFF/, '');
@@ -103,6 +104,7 @@ export async function analyzeViaRemoteEndpoint(
         mimeType: input.mimeType,
         model: input.model,
         inspectorNote: input.inspectorNote,
+        generateReport: input.generateReport,
       }),
     });
   } catch {
@@ -146,7 +148,7 @@ export async function analyzeViaOpenAiDirect(
   }
 
   const dataUrl = `data:${input.mimeType};base64,${input.base64}`;
-  const userText = buildAnalysisUserText(input.inspectorNote);
+  const userText = buildAnalysisUserText(input.inspectorNote, input.generateReport);
 
   let res: Response;
   try {

@@ -114,6 +114,7 @@ export default function AppLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
         tabBarActiveTintColor: active,
         tabBarInactiveTintColor: inactive,
         tabBarStyle: {

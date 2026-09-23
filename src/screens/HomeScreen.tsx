@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { PlanTag } from '@/components/ui/PlanTag';
 import { useAppTheme } from '@/contexts/ThemeContext';
@@ -13,6 +13,8 @@ import {
   QuickAccessCard,
   Surface,
 } from '@/src/components';
+
+const MASCOT_IMAGE = require('@/assets/brand/alpha-mascot-transparent.png');
 
 type HomeScreenProps = {
   userName?: string;
@@ -47,6 +49,15 @@ export function HomeScreen({
       </View>
 
       <Surface tone="accent" className="mb-6">
+        <View className="mb-3 flex-row items-center gap-3">
+          <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 86, height: 110 }} />
+          <View className="flex-1">
+            <Label style={{ color: colors.brandDark }}>Alpha Wolf</Label>
+            <Caption className="mt-1" style={{ color: colors.brandDark }}>
+              Seu assistente de inspeção em campo.
+            </Caption>
+          </View>
+        </View>
         <Caption className="uppercase tracking-widest" style={{ color: colors.brand }}>
           Começar
         </Caption>
