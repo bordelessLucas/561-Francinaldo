@@ -22,6 +22,12 @@ Storage só volta a ser tema se o cliente pedir **PDF/download** da Biblioteca �
 
 Sem plano aprovado → sem código de feature.
 
+## Sprint atual
+
+Plano aprovado/pendente de aprovação: [`sprint_atual_ia_rag_nrs.md`](sprint_atual_ia_rag_nrs.md).
+
+Prioridade: assertividade da IA, base completa de NRs e RAG. Voz antes do envio e ajustes de UI do cliente entram depois que esta base estiver estabilizada.
+
 ## Archive
 
 [`archive/`](archive/) — notas de sprint históricas (4A, 5A, 10A, roadmap antigo).  

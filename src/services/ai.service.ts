@@ -13,6 +13,7 @@ export type AnalyzeSituationImageInput = {
   localUri: string;
   /** Contexto livre do inspetor para refinar a Vision. */
   inspectorNote?: string;
+  generateReport?: boolean;
 };
 
 /**
@@ -39,6 +40,7 @@ export async function analyzeSituationImage(
     mimeType: image.mimeType,
     model,
     inspectorNote,
+    generateReport: Boolean(input.generateReport),
   };
 
   if (endpoint) {

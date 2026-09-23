@@ -17,6 +17,7 @@ export type RunAnalysisQueueInput = {
   uid: string;
   items: Array<{ localUri: string; source: AnalysisSource }>;
   inspectorNote?: string;
+  generateReport?: boolean;
   /** Retorne false para parar antes do próximo item (cancelamento da UI). */
   shouldContinue?: () => boolean;
   onProgress?: (snapshot: {
@@ -70,6 +71,7 @@ export async function runAnalysisQueue(
         localUri: current.localUri,
         source: current.source,
         inspectorNote: input.inspectorNote,
+        generateReport: input.generateReport,
       });
 
       if (input.shouldContinue && !input.shouldContinue()) {

@@ -5,14 +5,22 @@ import {
   Pressable,
   ScrollView,
   TextInput,
+  Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from 'expo-audio';
 import { router, type Href } from 'expo-router';
 
 import { useAppTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import type {
-  AnalysisConfidence,
   AnalysisResult,
   AnalysisSource,
   RiskSeverity,
@@ -24,7 +32,9 @@ import {
   Caption,
   Container,
   Heading,
+  InspectionReportCard,
   Label,
+  RiskLevelMeter,
   Surface,
 } from '@/src/components';
 import {
@@ -38,60 +48,96 @@ import {
   pickMultipleFromGallery,
   type PickedImage,
 } from '@/src/services/media.service';
+import { transcribeInspectorNote } from '@/src/services/dictation.service';
 
 type Step = 'idle' | 'preview' | 'analyzing' | 'result' | 'batch_result' | 'error';
+const MASCOT_IMAGE = require('@/assets/brand/alpha-mascot-transparent.png');
+
+const BLUE_UI = {
+  bg: '#07111B',
+  panel: '#101C28',
+  panelSoft: '#162637',
+  border: '#29435D',
+  blue: '#1E88E5',
+  text: '#F7FAFC',
+  muted: '#AFC3D4',
+  warning: '#F7C948',
+};
 
 const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   low: 'Baixa',
-  medium: 'Média',
+  medium: 'MÃ©dia',
   high: 'Alta',
-};
-
-const CONFIDENCE_LABEL: Record<AnalysisConfidence, string> = {
-  high: 'Alta',
-  medium: 'Média',
-  low: 'Baixa',
 };
 
 const QUEUE_STATUS_LABEL: Record<AnalysisQueueItem['status'], string> = {
   queued: 'Na fila',
   analyzing: 'Analisando',
-  done: 'Concluída',
+  done: 'ConcluÃ­da',
   failed: 'Falhou',
 };
+
+function getComplianceTitle(result: AnalysisResult): string {
+  switch (result.complianceSummary) {
+    case 'no_visible_issue':
+      return 'Sem problema visivel na foto';
+    case 'not_applicable':
+      return 'Imagem fora do contexto SST';
+    case 'needs_more_context':
+      return 'Precisa de mais contexto';
+    case 'issues_found':
+      return 'Riscos identificados';
+    default:
+      return result.risks.length > 0 ? 'Riscos identificados' : 'Sem riscos listados';
+  }
+}
+
+function getComplianceBody(result: AnalysisResult): string {
+  if (result.inspectorGuidance) return result.inspectorGuidance;
+  switch (result.complianceSummary) {
+    case 'no_visible_issue':
+      return 'A IA nao encontrou nao conformidade visivel nesta imagem. Valide no local e complemente se houver algo fora do enquadramento.';
+    case 'not_applicable':
+      return 'A imagem nao parece mostrar um ambiente de trabalho ou situacao avaliavel de SST.';
+    case 'needs_more_context':
+      return 'A imagem nao traz informacao suficiente para um relatorio confiavel. Envie outra foto ou detalhe o contexto.';
+    default:
+      return 'A ferramenta apoia a inspecao; valide no local antes de decisoes criticas.';
+  }
+}
 
 function getCaptureErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     switch (error.message) {
       case 'CAMERA_PERMISSION_DENIED':
-        return 'Permissão de câmera negada. Ative nas configurações do aparelho.';
+        return 'PermissÃ£o de cÃ¢mera negada. Ative nas configuraÃ§Ãµes do aparelho.';
       case 'GALLERY_PERMISSION_DENIED':
-        return 'Permissão de galeria negada. Ative nas configurações do aparelho.';
+        return 'PermissÃ£o de galeria negada. Ative nas configuraÃ§Ãµes do aparelho.';
       case 'IMAGE_READ_FAILED':
-        return 'Não foi possível ler a imagem selecionada.';
+        return 'NÃ£o foi possÃ­vel ler a imagem selecionada.';
       case 'AI_MISSING_IMAGE':
         return 'Selecione ao menos uma imagem para continuar.';
       case 'AI_PROVIDER_NOT_READY':
-        return 'A análise assistida está indisponível. Configure OPENAI_API_KEY ou a URL da API Netlify.';
+        return 'A anÃ¡lise assistida estÃ¡ indisponÃ­vel. Configure OPENAI_API_KEY ou a URL da API Netlify.';
       case 'AI_AUTH_FAILED':
-        return 'Falha de autenticação com a IA. Confira a chave OpenAI no ambiente.';
+        return 'Falha de autenticaÃ§Ã£o com a IA. Confira a chave OpenAI no ambiente.';
       case 'AI_QUOTA_EXCEEDED':
-        return 'A conta OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
+        return 'A conta OpenAI estÃ¡ sem crÃ©ditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
       case 'AI_BAD_IMAGE':
-        return 'A imagem não pôde ser analisada. Tente outra foto (boa iluminação, JPEG).';
+        return 'A imagem nÃ£o pÃ´de ser analisada. Tente outra foto (boa iluminaÃ§Ã£o, JPEG).';
       case 'AI_BAD_REQUEST':
-        return 'Pedido de análise inválido. Tente novamente com outra foto.';
+        return 'Pedido de anÃ¡lise invÃ¡lido. Tente novamente com outra foto.';
       case 'AI_NETWORK_ERROR':
-        return 'Falha de rede ao falar com a IA. Verifique a conexão e tente de novo.';
+        return 'Falha de rede ao falar com a IA. Verifique a conexÃ£o e tente de novo.';
       case 'AI_UPSTREAM_ERROR':
-        return 'O provedor de IA não respondeu corretamente. Tente novamente em instantes.';
+        return 'O provedor de IA nÃ£o respondeu corretamente. Tente novamente em instantes.';
       case 'AI_INVALID_JSON':
       case 'AI_INVALID_PAYLOAD':
       case 'AI_EMPTY_RISKS':
       case 'AI_EMPTY_RESPONSE':
         return 'A IA retornou um resultado incompleto. Tente outra foto, acrescente um contexto ou tente de novo.';
       case 'STORAGE_UPLOAD_DISABLED':
-        return 'A análise não depende de armazenamento na nuvem. Tente novamente o fluxo local.';
+        return 'A anÃ¡lise nÃ£o depende de armazenamento na nuvem. Tente novamente o fluxo local.';
       default:
         break;
     }
@@ -103,13 +149,36 @@ function getCaptureErrorMessage(error: unknown): string {
       : '';
 
   if (code.startsWith('storage/')) {
-    return 'Falha no envio da imagem. Verifique a conexão e tente de novo.';
+    return 'Falha no envio da imagem. Verifique a conexÃ£o e tente de novo.';
   }
   if (code === 'permission-denied') {
-    return 'Sem permissão para registrar a análise. Faça login novamente.';
+    return 'Sem permissÃ£o para registrar a anÃ¡lise. FaÃ§a login novamente.';
   }
 
-  return 'Não foi possível concluir a análise. Tente novamente.';
+  return 'NÃ£o foi possÃ­vel concluir a anÃ¡lise. Tente novamente.';
+}
+
+function getDictationErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    switch (error.message) {
+      case 'STT_PROVIDER_NOT_READY':
+        return 'Configure a URL da API Netlify para transcrever audio com seguranca.';
+      case 'STT_NETWORK_ERROR':
+        return 'Falha de rede ao transcrever o audio. Verifique a conexao e tente de novo.';
+      case 'STT_MISSING_AUDIO':
+      case 'STT_BAD_AUDIO':
+        return 'Nao foi possivel ler o audio gravado. Grave novamente mais perto do microfone.';
+      case 'AI_AUTH_FAILED':
+        return 'Falha de autenticacao com a IA. Confira a chave OpenAI no servidor.';
+      case 'AI_QUOTA_EXCEEDED':
+        return 'A conta OpenAI esta sem creditos para transcrever agora.';
+      case 'STT_EMPTY_RESPONSE':
+        return 'Nao identifiquei fala no audio. Tente gravar novamente.';
+      default:
+        break;
+    }
+  }
+  return 'Nao foi possivel transcrever o audio. Tente novamente ou digite o contexto.';
 }
 
 function mergeBatch(current: PickedImage[], incoming: PickedImage[]): PickedImage[] {
@@ -125,11 +194,13 @@ function mergeBatch(current: PickedImage[], incoming: PickedImage[]): PickedImag
 }
 
 /**
- * Análise em lote — várias fotos na UI; fila sequencial (1 Vision por vez).
+ * AnÃ¡lise em lote â€” vÃ¡rias fotos na UI; fila sequencial (1 Vision por vez).
  */
 export function AnalysisScreen() {
   const { user } = useAuth();
   const { colors } = useAppTheme();
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 250);
   const [step, setStep] = useState<Step>('idle');
   const [batch, setBatch] = useState<PickedImage[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -140,6 +211,9 @@ export function AnalysisScreen() {
   const [sessionUri, setSessionUri] = useState<string | null>(null);
   const [sessionSource, setSessionSource] = useState<AnalysisSource>('camera');
   const [inspectorNote, setInspectorNote] = useState('');
+  const [generateReport, setGenerateReport] = useState(false);
+  const [dictationError, setDictationError] = useState<string | null>(null);
+  const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [lastInspectorNote, setLastInspectorNote] = useState<string | null>(null);
   const [queueItems, setQueueItems] = useState<AnalysisQueueItem[]>([]);
   const [queueProgress, setQueueProgress] = useState({ index: 0, total: 0 });
@@ -147,6 +221,7 @@ export function AnalysisScreen() {
 
   const remainingSlots = MAX_ANALYSIS_BATCH - batch.length;
   const activePhoto = batch[activeIndex] ?? batch[0] ?? null;
+  const isRecordingNote = recorderState.isRecording;
 
   const batchSummary = useMemo(() => {
     const done = queueItems.filter((item) => item.status === 'done').length;
@@ -162,6 +237,9 @@ export function AnalysisScreen() {
     setSavedId(null);
     setSessionUri(null);
     setInspectorNote('');
+    setGenerateReport(false);
+    setDictationError(null);
+    setTranscribingAudio(false);
     setLastInspectorNote(null);
     setQueueItems([]);
     setQueueProgress({ index: 0, total: 0 });
@@ -170,11 +248,11 @@ export function AnalysisScreen() {
 
   async function handleAddFromCamera() {
     if (!user) {
-      setError('Faça login para registrar uma análise.');
+      setError('FaÃ§a login para registrar uma anÃ¡lise.');
       return;
     }
     if (remainingSlots <= 0) {
-      setError(`Você pode enviar até ${MAX_ANALYSIS_BATCH} fotos por vez.`);
+      setError(`VocÃª pode enviar atÃ© ${MAX_ANALYSIS_BATCH} fotos por vez.`);
       return;
     }
 
@@ -201,11 +279,11 @@ export function AnalysisScreen() {
 
   async function handleAddFromGallery() {
     if (!user) {
-      setError('Faça login para registrar uma análise.');
+      setError('FaÃ§a login para registrar uma anÃ¡lise.');
       return;
     }
     if (remainingSlots <= 0) {
-      setError(`Você pode enviar até ${MAX_ANALYSIS_BATCH} fotos por vez.`);
+      setError(`VocÃª pode enviar atÃ© ${MAX_ANALYSIS_BATCH} fotos por vez.`);
       return;
     }
 
@@ -246,7 +324,7 @@ export function AnalysisScreen() {
 
   async function handleConfirmBatch() {
     if (!user) {
-      setError('Faça login para registrar uma análise.');
+      setError('FaÃ§a login para registrar uma anÃ¡lise.');
       return;
     }
     if (batch.length === 0) {
@@ -273,6 +351,7 @@ export function AnalysisScreen() {
         uid: user.uid,
         items: batch,
         inspectorNote: note,
+        generateReport,
         shouldContinue: () => analysisRunIdRef.current === runId,
         onProgress: ({ index, total, items }) => {
           if (analysisRunIdRef.current !== runId) return;
@@ -313,14 +392,58 @@ export function AnalysisScreen() {
     }
   }
 
+  async function handleToggleDictation() {
+    setDictationError(null);
+    try {
+      if (isRecordingNote) {
+        setTranscribingAudio(true);
+        await recorder.stop();
+        await setAudioModeAsync({
+          allowsRecording: false,
+          playsInSilentMode: true,
+        });
+        const uri = recorder.uri || recorder.getStatus().url;
+        if (!uri) {
+          throw new Error('STT_MISSING_AUDIO');
+        }
+        const text = await transcribeInspectorNote({ localUri: uri });
+        setInspectorNote((current) => {
+          const prefix = current.trim();
+          return prefix ? `${prefix}\n${text}` : text;
+        });
+        setTranscribingAudio(false);
+        return;
+      }
+
+      const permission = await requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        throw new Error('MIC_PERMISSION_DENIED');
+      }
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+      await recorder.prepareToRecordAsync();
+      recorder.record({ forDuration: 90 });
+    } catch (err) {
+      if (err instanceof Error && err.message === 'MIC_PERMISSION_DENIED') {
+        setDictationError('Permissao de microfone negada. Ative nas configuracoes do aparelho.');
+      } else {
+        setDictationError(getDictationErrorMessage(err));
+      }
+    } finally {
+      setTranscribingAudio(false);
+    }
+  }
+
   async function handleReanalyzeSingle() {
     if (!user || !sessionUri) {
-      setError('A foto desta sessão não está mais disponível. Monte um novo lote.');
+      setError('A foto desta sessÃ£o nÃ£o estÃ¡ mais disponÃ­vel. Monte um novo lote.');
       setStep('idle');
       return;
     }
     if (!inspectorNote.trim()) {
-      setError('Descreva o que a IA não identificou ou o contexto extra para reanalisar.');
+      setError('Descreva o que a IA nÃ£o identificou ou o contexto extra para reanalisar.');
       return;
     }
 
@@ -334,6 +457,7 @@ export function AnalysisScreen() {
         localUri: sessionUri,
         source: sessionSource,
         inspectorNote: inspectorNote.trim(),
+        generateReport,
       });
       if (analysisRunIdRef.current !== runId) return;
       setResult(record.result ?? null);
@@ -377,6 +501,7 @@ export function AnalysisScreen() {
         uid: user.uid,
         items: retryInput,
         inspectorNote: note,
+        generateReport,
         shouldContinue: () => analysisRunIdRef.current === runId,
         onProgress: ({ index, total, items }) => {
           if (analysisRunIdRef.current !== runId) return;
@@ -421,7 +546,7 @@ export function AnalysisScreen() {
   const analyzingLabel =
     queueProgress.total > 1
       ? `Analisando foto ${Math.min(queueProgress.index + 1, queueProgress.total)} de ${queueProgress.total}`
-      : 'Analisando com IA…';
+      : 'Analisando com IAâ€¦';
 
   return (
     <Container scroll>
@@ -434,65 +559,143 @@ export function AnalysisScreen() {
         />
       ) : null}
 
+      <View className="mb-4 mt-2 flex-row items-center gap-3">
+        <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 76, height: 92 }} />
+        <View className="flex-1 rounded-2xl px-4 py-3" style={{ backgroundColor: colors.canvasElev }}>
+          <Label>Alpha Wolf</Label>
+          <Caption className="mt-1">Me diga o contexto e envie a foto para eu analisar.</Caption>
+        </View>
+      </View>
+
       <View className="mb-8 mt-2 gap-2">
-        <Heading>Nova análise</Heading>
+        <Heading>Nova anÃ¡lise</Heading>
         <Body>
-          Envie uma ou várias fotos do campo. O Alpha SST analisa cada situação com a IA e
+          Envie uma ou vÃ¡rias fotos do campo. O Alpha SST analisa cada situaÃ§Ã£o com a IA e
           organiza o resultado para o inspetor.
         </Body>
       </View>
 
       {step === 'idle' ? (
-        <View className="gap-4">
-          <Surface>
-            <Label>Registrar situações</Label>
-            <Caption className="mt-2">
-              Tire fotos com a câmera ou selecione várias da galeria (até {MAX_ANALYSIS_BATCH}).
-              Cada imagem recebe uma análise completa de riscos, controles e NRs.
-            </Caption>
+        <View
+          className="gap-4 rounded-[28px] px-4 py-5"
+          style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
+        >
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="font-sansSemi text-lg" style={{ color: BLUE_UI.text }}>
+                SST ALERTA
+              </Text>
+              <Text className="mt-2 font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                ANALISE DE RISCO POR IA
+              </Text>
+            </View>
+            <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 54, height: 64 }} />
+          </View>
 
-            <Button
-              label="Fotografar com a câmera"
-              onPress={handleAddFromCamera}
-              loading={picking}
-              className="mt-5"
-            />
-            <Button
-              label="Escolher fotos da galeria"
-              variant="secondary"
-              onPress={handleAddFromGallery}
+          <View
+            className="rounded-3xl px-4 py-5"
+            style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
+          >
+            <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
+              Registrar situacoes
+            </Text>
+            <Text className="mt-2 font-sans text-sm leading-5" style={{ color: BLUE_UI.muted }}>
+              Tire uma foto em campo ou escolha imagens da galeria. O Alpha Wolf analisa riscos, controles e NRs.
+            </Text>
+
+            <Pressable
+              accessibilityRole="button"
               disabled={picking}
-              className="mt-3"
-            />
-          </Surface>
+              onPress={handleAddFromCamera}
+              className="mt-5 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+              style={{ backgroundColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+            >
+              {picking ? <ActivityIndicator color={BLUE_UI.text} /> : <Ionicons name="camera" size={20} color={BLUE_UI.text} />}
+              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                TIRAR FOTO PARA ANALISAR
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              disabled={picking}
+              onPress={handleAddFromGallery}
+              className="mt-3 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border px-5"
+              style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+            >
+              <Ionicons name="images-outline" size={20} color={BLUE_UI.text} />
+              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                ESCOLHER FOTOS DA GALERIA
+              </Text>
+            </Pressable>
+          </View>
         </View>
       ) : null}
-
       {step === 'preview' && batch.length > 0 ? (
-        <View className="gap-4">
-          <Surface padding={false}>
-            {activePhoto ? (
-              <Image
-                source={{ uri: activePhoto.localUri }}
-                className="h-72 w-full"
-                style={{ backgroundColor: colors.canvas }}
-                resizeMode="cover"
-                accessibilityLabel="Pré-visualização da situação"
-              />
-            ) : null}
-            <View className="px-5 py-4">
-              <Label>
-                {batch.length === 1
-                  ? 'Confirmar foto'
-                  : `${batch.length} fotos prontas para análise`}
-              </Label>
-              <Caption className="mt-2">
-                {batch.length === 1
-                  ? 'Confirme para analisar ou adicione mais fotos ao lote.'
-                  : 'As fotos serão analisadas em sequência — você acompanha o progresso de cada uma.'}
+        <View
+          className="-mx-3 gap-4 rounded-[28px] px-3 py-4"
+          style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
+        >
+          <View className="flex-row items-center justify-between px-1">
+            <View>
+              <Text className="font-sansSemi text-lg" style={{ color: BLUE_UI.text }}>
+                SST ALERTA
+              </Text>
+              <Text className="mt-2 font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                ANALISE DE RISCO POR IA
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="person-outline" size={20} color={BLUE_UI.text} />
+              <Ionicons name="menu" size={24} color={BLUE_UI.text} />
+            </View>
+          </View>
+
+          <View
+            className="overflow-hidden rounded-3xl"
+            style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
+          >
+            <View className="relative">
+              {activePhoto ? (
+                <Image
+                  source={{ uri: activePhoto.localUri }}
+                  className="h-80 w-full"
+                  style={{ backgroundColor: BLUE_UI.panelSoft }}
+                  resizeMode="cover"
+                  accessibilityLabel="Pre-visualizacao da situacao"
+                />
+              ) : null}
+              <View className="absolute left-4 top-4 h-9 w-9 rounded-tl-2xl border-l-2 border-t-2" style={{ borderColor: BLUE_UI.text }} />
+              <View className="absolute right-4 top-4 h-9 w-9 rounded-tr-2xl border-r-2 border-t-2" style={{ borderColor: BLUE_UI.text }} />
+              <View className="absolute bottom-4 left-4 h-9 w-9 rounded-bl-2xl border-b-2 border-l-2" style={{ borderColor: BLUE_UI.text }} />
+              <View className="absolute bottom-4 right-4 h-9 w-9 rounded-br-2xl border-b-2 border-r-2" style={{ borderColor: BLUE_UI.text }} />
+              <View
+                className="absolute right-4 top-4 flex-row items-center gap-2 rounded-full px-3 py-2"
+                style={{ backgroundColor: 'rgba(7,17,27,0.82)' }}
+              >
+                <Ionicons name="images-outline" size={16} color={BLUE_UI.warning} />
+                <Text className="font-sansSemi text-xs" style={{ color: BLUE_UI.text }}>
+                  {batch.length} foto{batch.length === 1 ? '' : 's'}
+                </Text>
+              </View>
+            </View>
+
+            <View className="px-4 pb-4 pt-3">
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleConfirmBatch}
+                className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+                style={{ backgroundColor: BLUE_UI.blue }}
+              >
+                <Ionicons name="camera" size={20} color={BLUE_UI.text} />
+                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                  {batch.length === 1 ? 'TIRAR FOTO PARA ANALISAR' : `ANALISAR ${batch.length} FOTOS`}
+                </Text>
+              </Pressable>
+              <Caption className="mt-3 text-center" style={{ color: BLUE_UI.muted }}>
+                Contexto e relatorio sao opcionais antes do envio.
               </Caption>
             </View>
-          </Surface>
+          </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View className="flex-row gap-3 px-1">
@@ -505,12 +708,12 @@ export function AnalysisScreen() {
                     className="overflow-hidden rounded-2xl"
                     style={{
                       borderWidth: 2,
-                      borderColor: selected ? colors.brand : colors.line,
+                      borderColor: selected ? BLUE_UI.blue : BLUE_UI.border,
                     }}
                   >
                     <Image
                       source={{ uri: item.localUri }}
-                      style={{ width: 72, height: 72, backgroundColor: colors.canvas }}
+                      style={{ width: 72, height: 72, backgroundColor: BLUE_UI.panelSoft }}
                     />
                   </Pressable>
                 );
@@ -527,6 +730,7 @@ export function AnalysisScreen() {
                   onPress={handleAddFromCamera}
                   loading={picking}
                   className="min-h-12 flex-1"
+                  style={{ borderColor: BLUE_UI.blue }}
                 />
                 <Button
                   label="Galeria"
@@ -534,10 +738,11 @@ export function AnalysisScreen() {
                   onPress={handleAddFromGallery}
                   disabled={picking}
                   className="min-h-12 flex-1"
+                  style={{ borderColor: BLUE_UI.blue }}
                 />
               </>
             ) : (
-              <Caption>Lote completo ({MAX_ANALYSIS_BATCH} fotos).</Caption>
+              <Caption style={{ color: BLUE_UI.muted }}>Lote completo ({MAX_ANALYSIS_BATCH} fotos).</Caption>
             )}
           </View>
 
@@ -546,42 +751,97 @@ export function AnalysisScreen() {
               label="Remover foto selecionada"
               variant="secondary"
               onPress={() => handleRemovePhoto(activePhoto.localUri)}
+              style={{ backgroundColor: BLUE_UI.panel, borderColor: BLUE_UI.border }}
             />
           ) : null}
 
-          <Surface>
-            <Label>Contexto opcional do lote</Label>
-            <Caption className="mt-2">
-              Vale para todas as fotos deste envio (atividade, área, o que a câmera não mostra).
-            </Caption>
+          <View
+            className="rounded-3xl px-4 py-4"
+            style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
+          >
+            <View className="flex-row items-center gap-3">
+              <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 46, height: 56 }} />
+              <View className="flex-1">
+                <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
+                  Fale com o Alpha Wolf
+                </Text>
+                <Text className="mt-1 font-sans text-xs" style={{ color: BLUE_UI.muted }}>
+                  Diga area, atividade ou algo que a foto nao mostra.
+                </Text>
+              </View>
+            </View>
             <TextInput
               value={inspectorNote}
               onChangeText={setInspectorNote}
-              placeholder="Ex.: britagem; turno da manhã; possível falta de EPI..."
-              placeholderTextColor={colors.inkMuted}
+              placeholder="Ex.: britagem; turno da manha; possivel falta de EPI..."
+              placeholderTextColor={BLUE_UI.muted}
               multiline
               textAlignVertical="top"
               className="mt-3 min-h-[88px] rounded-2xl border px-4 py-3 font-sans text-base"
               style={{
-                color: colors.ink,
-                backgroundColor: colors.canvasElev,
-                borderColor: colors.line,
+                color: BLUE_UI.text,
+                backgroundColor: BLUE_UI.panelSoft,
+                borderColor: BLUE_UI.border,
               }}
             />
-          </Surface>
+            <Pressable
+              accessibilityRole="button"
+              disabled={transcribingAudio}
+              onPress={handleToggleDictation}
+              className="mt-3 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+              style={{
+                backgroundColor: isRecordingNote ? '#D92D20' : BLUE_UI.blue,
+                opacity: transcribingAudio ? 0.6 : 1,
+              }}
+            >
+              {transcribingAudio ? (
+                <ActivityIndicator color={BLUE_UI.text} />
+              ) : (
+                <Ionicons name={isRecordingNote ? 'stop-circle' : 'mic'} size={20} color={BLUE_UI.text} />
+              )}
+              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                {isRecordingNote ? 'PARAR E TRANSCREVER' : transcribingAudio ? 'TRANSCREVENDO AUDIO...' : 'FALAR CONTEXTO'}
+              </Text>
+            </Pressable>
+            {isRecordingNote ? (
+              <Caption className="mt-2" style={{ color: BLUE_UI.warning }}>
+                Gravando... toque para parar e inserir o texto no contexto.
+              </Caption>
+            ) : null}
+            {dictationError ? (
+              <Caption className="mt-2" style={{ color: '#FFB4AB' }}>
+                {dictationError}
+              </Caption>
+            ) : null}
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: generateReport }}
+              onPress={() => setGenerateReport((current) => !current)}
+              className="mt-4 flex-row items-center gap-3"
+            >
+              <View
+                className="h-6 w-6 items-center justify-center rounded-md border"
+                style={{
+                  backgroundColor: generateReport ? BLUE_UI.blue : 'transparent',
+                  borderColor: generateReport ? BLUE_UI.blue : BLUE_UI.border,
+                }}
+              >
+                {generateReport ? <Caption style={{ color: colors.white }}>✓</Caption> : null}
+              </View>
+              <View className="flex-1">
+                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                  Gerar relatorio fotografico
+                </Text>
+                <Caption className="mt-1" style={{ color: BLUE_UI.muted }}>
+                  Segue o modelo da inspecao: identificacao, descricao do risco e acoes.
+                </Caption>
+              </View>
+            </Pressable>
+          </View>
 
-          <Button
-            label={
-              batch.length === 1
-                ? 'Confirmar e analisar'
-                : `Analisar ${batch.length} fotos`
-            }
-            onPress={handleConfirmBatch}
-          />
-          <Button label="Limpar e recomeçar" variant="outline" onPress={handleNewAnalysis} />
+          <Button label="Limpar e recomecar" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
-
       {step === 'analyzing' ? (
         <View className="gap-4">
           <Surface className="items-center py-8">
@@ -589,8 +849,8 @@ export function AnalysisScreen() {
             <Label className="mt-5">{analyzingLabel}</Label>
             <Caption className="mt-2 text-center">
               {queueProgress.total > 1
-                ? 'Processando o lote com segurança, uma situação por vez.'
-                : 'Identificando riscos, controles, NRs e pontos de dúvida.'}
+                ? 'Processando o lote com seguranÃ§a, uma situaÃ§Ã£o por vez.'
+                : 'Identificando riscos, controles, NRs e pontos de dÃºvida.'}
             </Caption>
           </Surface>
 
@@ -634,110 +894,131 @@ export function AnalysisScreen() {
             />
           ) : null}
 
+          {result.risks.length > 0 || result.inspectionReport ? (
+            <Surface>
+              <RiskLevelMeter
+                risks={result.risks}
+                fallbackSeverity={result.inspectionReport?.severity}
+              />
+            </Surface>
+          ) : null}
+
+          <Surface tone={result.risks.length > 0 ? 'elevated' : 'accent'}>
+            <Label>{getComplianceTitle(result)}</Label>
+            <Body className="mt-2">{getComplianceBody(result)}</Body>
+            {result.sceneType ? (
+              <Caption className="mt-2">Cena: {result.sceneType}</Caption>
+            ) : null}
+          </Surface>
+
           {result.needsInspectorReview ||
-          result.overallConfidence === 'low' ||
-          result.overallConfidence === 'medium' ||
+          result.inspectorGuidance ||
           (result.limitations && result.limitations.length > 0) ? (
             <Surface tone="signal">
-              <Label>Atenção do inspetor</Label>
+              <Label>AtenÃ§Ã£o do inspetor</Label>
               {result.overallConfidence ? (
                 <Caption className="mt-2">
-                  Confiança geral da leitura: {CONFIDENCE_LABEL[result.overallConfidence]}
+                  RevisÃ£o recomendada pelo Alpha Wolf
                 </Caption>
               ) : null}
               {result.inspectorGuidance ? (
                 <Body className="mt-2">{result.inspectorGuidance}</Body>
               ) : (
                 <Body className="mt-2">
-                  A IA sinalizou dúvida ou limitação. Complemente com uma mensagem e reanalise.
+                  A IA sinalizou dÃºvida ou limitaÃ§Ã£o. Complemente com uma mensagem e reanalise.
                 </Body>
               )}
               {result.limitations?.map((item) => (
                 <Caption key={item} className="mt-1">
-                  • {item}
+                  â€¢ {item}
                 </Caption>
               ))}
             </Surface>
           ) : (
-            <Surface tone="accent">
-              <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
-                Leitura com boa confiança
-              </Caption>
-              <Caption className="mt-1">
-                A ferramenta apoia a inspeção; valide no local antes de decisões críticas.
-              </Caption>
-            </Surface>
+            null
           )}
 
           {lastInspectorNote ? (
             <Surface tone="elevated">
-              <Caption className="font-sansSemi">Contexto usado nesta análise</Caption>
+              <Caption className="font-sansSemi">Contexto usado nesta anÃ¡lise</Caption>
               <Body className="mt-2">{lastInspectorNote}</Body>
             </Surface>
           ) : null}
 
-          <Surface>
-            <Label>Riscos identificados</Label>
-            <View className="mt-4 gap-4">
-              {result.risks.map((risk) => (
-                <View key={risk.id} className="gap-1">
-                  <Label>
-                    {risk.title} · {SEVERITY_LABEL[risk.severity]}
-                    {risk.confidence ? ` · conf. ${CONFIDENCE_LABEL[risk.confidence]}` : ''}
-                  </Label>
-                  <Caption>{risk.description}</Caption>
-                  {risk.uncertaintyNote ? (
-                    <Caption style={{ color: colors.signal }}>
-                      Verificar: {risk.uncertaintyNote}
-                    </Caption>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          </Surface>
-
-          <Surface>
-            <Label>Medidas de controle</Label>
-            <View className="mt-4 gap-3">
-              {result.controls.map((control, index) => {
-                const riskTitle =
-                  result.risks.find((r) => r.id === control.riskId)?.title ?? control.riskId;
-                return (
-                  <View key={`${control.riskId}-${index}`} className="gap-1">
-                    <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
-                      {riskTitle}
-                    </Caption>
-                    <Body>{control.measure}</Body>
+          {result.risks.length > 0 ? (
+            <Surface>
+              <Label>Riscos identificados</Label>
+              <View className="mt-4 gap-4">
+                {result.risks.map((risk) => (
+                  <View key={risk.id} className="gap-1">
+                    <Label>
+                      {risk.title} Â· {SEVERITY_LABEL[risk.severity]}
+                    </Label>
+                    <Caption>{risk.description}</Caption>
+                    {risk.evidence?.map((item) => (
+                      <Caption key={item}>Evid?ncia: {item}</Caption>
+                    ))}
+                    {risk.uncertaintyNote ? (
+                      <Caption style={{ color: colors.signal }}>
+                        Verificar: {risk.uncertaintyNote}
+                      </Caption>
+                    ) : null}
                   </View>
-                );
-              })}
-            </View>
-          </Surface>
+                ))}
+              </View>
+            </Surface>
 
-          <Surface>
-            <Label>NRs relacionadas</Label>
-            <View className="mt-4 gap-3">
-              {result.nrs.map((nr, index) => (
-                <View key={`${nr.code}-${index}`} className="gap-1">
-                  <Label>
-                    {nr.code} — {nr.title}
-                  </Label>
-                  <Caption>{nr.relevance}</Caption>
-                </View>
-              ))}
-            </View>
-          </Surface>
+          ) : null}
+          {result.controls.length > 0 ? (
+            <Surface>
+              <Label>Medidas de controle</Label>
+              <View className="mt-4 gap-3">
+                {result.controls.map((control, index) => {
+                  const riskTitle =
+                    result.risks.find((r) => r.id === control.riskId)?.title ?? control.riskId;
+                  return (
+                    <View key={`${control.riskId}-${index}`} className="gap-1">
+                      <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
+                        {riskTitle}
+                      </Caption>
+                      <Body>{control.measure}</Body>
+                    </View>
+                  );
+                })}
+              </View>
+            </Surface>
+
+          ) : null}
+          {result.nrs.length > 0 ? (
+            <Surface>
+              <Label>NRs relacionadas</Label>
+              <View className="mt-4 gap-3">
+                {result.nrs.map((nr, index) => (
+                  <View key={`${nr.code}-${index}`} className="gap-1">
+                    <Label>
+                      {nr.code} â€” {nr.title}
+                    </Label>
+                    <Caption>{nr.relevance}</Caption>
+                  </View>
+                ))}
+              </View>
+            </Surface>
+          ) : null}
+
+          {result.inspectionReport ? (
+            <InspectionReportCard report={result.inspectionReport} />
+          ) : null}
 
           {sessionUri ? (
             <Surface>
-              <Label>Reanalisar com informação extra</Label>
+              <Label>Reanalisar com informaÃ§Ã£o extra</Label>
               <Caption className="mt-2">
-                Se a IA não identificou algo, descreva o contexto e rode de novo com a mesma foto.
+                Se a IA nÃ£o identificou algo, descreva o contexto e rode de novo com a mesma foto.
               </Caption>
               <TextInput
                 value={inspectorNote}
                 onChangeText={setInspectorNote}
-                placeholder="Ex.: não deu para ver a guarda da correia..."
+                placeholder="Ex.: nÃ£o deu para ver a guarda da correia..."
                 placeholderTextColor={colors.inkMuted}
                 multiline
                 textAlignVertical="top"
@@ -749,7 +1030,7 @@ export function AnalysisScreen() {
                 }}
               />
               <Button
-                label="Reanalisar com esta informação"
+                label="Reanalisar com esta informaÃ§Ã£o"
                 variant="secondary"
                 onPress={handleReanalyzeSingle}
                 className="mt-4"
@@ -759,24 +1040,24 @@ export function AnalysisScreen() {
 
           {savedId ? (
             <Button
-              label="Ver no histórico"
+              label="Ver no histÃ³rico"
               onPress={() => router.push(`/(app)/history/${savedId}` as Href)}
             />
           ) : null}
-          <Button label="Nova análise" variant="outline" onPress={handleNewAnalysis} />
+          <Button label="Nova anÃ¡lise" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
 
       {step === 'batch_result' ? (
         <View className="gap-4">
           <Surface tone="accent">
-            <Label>Lote concluído</Label>
+            <Label>Lote concluÃ­do</Label>
             <Body className="mt-2">
-              {batchSummary.done} concluída{batchSummary.done === 1 ? '' : 's'}
+              {batchSummary.done} concluÃ­da{batchSummary.done === 1 ? '' : 's'}
               {batchSummary.failed > 0
-                ? ` · ${batchSummary.failed} com falha`
+                ? ` Â· ${batchSummary.failed} com falha`
                 : ''}{' '}
-              de {batchSummary.total}. Cada foto gerou um registro no histórico.
+              de {batchSummary.total}. Cada foto gerou um registro no histÃ³rico.
             </Body>
           </Surface>
 
@@ -803,7 +1084,7 @@ export function AnalysisScreen() {
                     <Caption style={{ color: colors.brandDark }}>
                       {QUEUE_STATUS_LABEL[item.status]}
                       {item.result?.risks?.length
-                        ? ` · ${item.result.risks.length} risco(s)`
+                        ? ` Â· ${item.result.risks.length} risco(s)`
                         : ''}
                     </Caption>
                     {item.status === 'failed' ? (
@@ -832,7 +1113,7 @@ export function AnalysisScreen() {
             <Surface>
               <Label>Retentar falhas</Label>
               <Caption className="mt-2">
-                Envie um contexto extra se quiser e rode de novo só as fotos que falharam.
+                Envie um contexto extra se quiser e rode de novo sÃ³ as fotos que falharam.
               </Caption>
               <TextInput
                 value={inspectorNote}
@@ -858,17 +1139,17 @@ export function AnalysisScreen() {
           ) : null}
 
           <Button
-            label="Ver histórico"
+            label="Ver histÃ³rico"
             onPress={() => router.push('/(app)/history' as Href)}
           />
-          <Button label="Nova análise" variant="outline" onPress={handleNewAnalysis} />
+          <Button label="Nova anÃ¡lise" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
 
       {step === 'error' ? (
         <View className="gap-4">
           <Surface tone="signal">
-            <Label>Não foi possível analisar</Label>
+            <Label>NÃ£o foi possÃ­vel analisar</Label>
             <Body className="mt-2">{error ?? 'Tente novamente.'}</Body>
           </Surface>
           {batch.length > 0 ? (

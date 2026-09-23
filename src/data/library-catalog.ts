@@ -1,3 +1,5 @@
+import { NR_CATALOG } from '@/src/data/nrs';
+
 export type LibraryDocKind = 'checklist' | 'os' | 'nr' | 'planilha';
 
 export type LibraryDocument = {
@@ -6,6 +8,7 @@ export type LibraryDocument = {
   summary: string;
   meta: string;
   tags?: string[];
+  officialUrl?: string;
 };
 
 export type LibraryCategoryId = 'checklists' | 'os' | 'nrs' | 'planilhas';
@@ -18,139 +21,110 @@ export type LibraryCategory = {
   documents: LibraryDocument[];
 };
 
-/** Catálogo local (Sprint 6A–8) — metadados sem arquivos no Storage. */
+/** Catalogo local (Sprint 6A-8) - metadados sem arquivos no Storage. */
 export const LIBRARY_CATALOG: LibraryCategory[] = [
   {
     id: 'checklists',
     title: 'Checklists',
-    description: 'Conferências rápidas por equipamento e ambiente',
+    description: 'Conferencias rapidas por equipamento e ambiente',
     kind: 'checklist',
     documents: [
       {
         id: 'cl-extintores',
-        title: 'Checklist — Extintores',
-        summary: 'Inspeção visual, lacre, manômetro e validade.',
-        meta: 'Campo · 8 itens',
-        tags: ['prevenção', 'incêndio'],
+        title: 'Checklist - Extintores',
+        summary: 'Inspecao visual, lacre, manometro e validade.',
+        meta: 'Campo - 8 itens',
+        tags: ['prevencao', 'incendio'],
       },
       {
         id: 'cl-escadas',
-        title: 'Checklist — Escadas e andaimes',
-        summary: 'Estabilidade, acesso e sinalização antes do uso.',
-        meta: 'Campo · 12 itens',
+        title: 'Checklist - Escadas e andaimes',
+        summary: 'Estabilidade, acesso e sinalizacao antes do uso.',
+        meta: 'Campo - 12 itens',
         tags: ['altura'],
       },
       {
         id: 'cl-bombas',
-        title: 'Checklist — Área de bombas (posto)',
+        title: 'Checklist - Area de bombas (posto)',
         summary: 'Derrames, EPI, extintores e isolamento da pista.',
-        meta: 'Posto · 10 itens',
-        tags: ['combustível', 'NR-20'],
+        meta: 'Posto - 10 itens',
+        tags: ['combustivel', 'NR-20'],
       },
       {
         id: 'cl-eletrica',
-        title: 'Checklist — Painel elétrico',
-        summary: 'Bloqueio, etiquetagem e condições do quadro.',
-        meta: 'Industrial · 9 itens',
-        tags: ['elétrica'],
+        title: 'Checklist - Painel eletrico',
+        summary: 'Bloqueio, etiquetagem e condicoes do quadro.',
+        meta: 'Industrial - 9 itens',
+        tags: ['eletrica'],
       },
     ],
   },
   {
     id: 'os',
-    title: 'Ordens de Serviço',
+    title: 'Ordens de Servico',
     description: 'Modelos para orientar atividades em campo',
     kind: 'os',
     documents: [
       {
         id: 'os-altura',
-        title: 'OS — Trabalho em altura',
-        summary: 'Permissão, EPI anticqueda e supervisão.',
-        meta: 'Modelo · uso externo',
+        title: 'OS - Trabalho em altura',
+        summary: 'Permissao, EPI antiquedas e supervisao.',
+        meta: 'Modelo - uso externo',
         tags: ['NR-35'],
       },
       {
         id: 'os-confinado',
-        title: 'OS — Espaço confinado',
+        title: 'OS - Espaco confinado',
         summary: 'Atmosfera, vigia e procedimentos de resgate.',
-        meta: 'Modelo · uso externo',
+        meta: 'Modelo - uso externo',
         tags: ['NR-33'],
       },
       {
         id: 'os-bomba',
-        title: 'OS — Manutenção de bomba',
-        summary: 'LOTO, isolamento e teste pós-manutenção.',
-        meta: 'Modelo · posto/indústria',
-        tags: ['manutenção'],
+        title: 'OS - Manutencao de bomba',
+        summary: 'LOTO, isolamento e teste pos-manutencao.',
+        meta: 'Modelo - posto/industria',
+        tags: ['manutencao'],
       },
     ],
   },
   {
     id: 'nrs',
     title: 'Normas Regulamentadoras',
-    description: 'Consulta rápida às NRs mais usadas em campo',
+    description: 'Consulta rapida as NRs disponiveis na fonte oficial',
     kind: 'nr',
-    documents: [
-      {
-        id: 'nr-01',
-        title: 'NR-01 — Disposições gerais e GRO',
-        summary: 'Gerenciamento de riscos ocupacionais e PGR.',
-        meta: 'Consulta',
-        tags: ['GRO', 'PGR'],
-      },
-      {
-        id: 'nr-06',
-        title: 'NR-06 — EPI',
-        summary: 'Fornecimento, treinamento e fiscalização do uso.',
-        meta: 'Consulta',
-        tags: ['EPI'],
-      },
-      {
-        id: 'nr-12',
-        title: 'NR-12 — Máquinas e equipamentos',
-        summary: 'Proteções e dispositivos de segurança.',
-        meta: 'Consulta',
-        tags: ['máquinas'],
-      },
-      {
-        id: 'nr-20',
-        title: 'NR-20 — Inflamáveis e combustíveis',
-        summary: 'Controles em áreas com risco de inflamáveis.',
-        meta: 'Consulta',
-        tags: ['postos'],
-      },
-      {
-        id: 'nr-35',
-        title: 'NR-35 — Trabalho em altura',
-        summary: 'Planejamento e proteção contra quedas.',
-        meta: 'Consulta',
-        tags: ['altura'],
-      },
-    ],
+    documents: NR_CATALOG.map((nr) => ({
+      id: nr.code.toLowerCase(),
+      title: `${nr.code} - ${nr.title}`,
+      summary: nr.summary,
+      meta: nr.status === 'revogada' ? 'Consulta - revogada' : 'Consulta',
+      tags: nr.tags,
+      officialUrl: nr.officialUrl,
+    })),
   },
   {
     id: 'planilhas',
     title: 'Planilhas SST',
-    description: 'Controles e registros da rotina de segurança',
+    description: 'Controles e registros da rotina de seguranca',
     kind: 'planilha',
     documents: [
       {
         id: 'pl-epi',
         title: 'Controle de entrega de EPI',
-        summary: 'Registro de entrega e devolução por colaborador.',
-        meta: 'Planilha · modelo',
+        summary: 'Registro de entrega e devolucao por colaborador.',
+        meta: 'Planilha - modelo',
       },
       {
         id: 'pl-riscos',
-        title: 'Inventário de riscos — modelo',
+        title: 'Inventario de riscos - modelo',
         summary: 'Base para alimentar o PGR.',
-        meta: 'Planilha · modelo',
+        meta: 'Planilha - modelo',
       },
       {
         id: 'pl-inspecoes',
-        title: 'Registro de inspeções mensais',
-        summary: 'Acompanhamento de inspeções periódicas.',
-        meta: 'Planilha · modelo',
+        title: 'Registro de inspecoes mensais',
+        summary: 'Acompanhamento de inspecoes periodicas.',
+        meta: 'Planilha - modelo',
       },
     ],
   },

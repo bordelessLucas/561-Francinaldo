@@ -16,23 +16,58 @@ export type AppModule = 'home' | 'analysis' | 'library' | 'history' | 'profile';
 
 export type AnalysisSource = 'camera' | 'gallery';
 
-/** uploaded = Storage (standby); fluxo oficial: pending → analyzing → done|failed */
+/** uploaded = Storage (standby); official flow: pending -> analyzing -> done|failed */
 export type AnalysisStatus = 'pending' | 'uploaded' | 'analyzing' | 'done' | 'failed';
 
 export type RiskSeverity = 'low' | 'medium' | 'high';
 
-/** Confiança da leitura visual / inferência. */
+/** Confidence of the visual reading or inference. */
 export type AnalysisConfidence = 'high' | 'medium' | 'low';
+
+export type AnalysisSceneType = 'workplace' | 'non_workplace' | 'unclear';
+
+export type AnalysisComplianceSummary =
+  | 'issues_found'
+  | 'no_visible_issue'
+  | 'not_applicable'
+  | 'needs_more_context';
+
+export type AnalysisRetrievalContext = {
+  code: string;
+  title: string;
+  reason: string;
+};
+
+export type InspectionReportAction = {
+  id: string;
+  action: string;
+  responsible?: string;
+  deadline?: string;
+  status?: string;
+};
+
+export type InspectionReport = {
+  title: string;
+  inspectionDate: string;
+  area: string;
+  responsible: string;
+  interdicted: boolean;
+  severity: RiskSeverity;
+  riskDescription: string;
+  actions: InspectionReportAction[];
+};
 
 export type AnalysisRisk = {
   id: string;
   title: string;
   description: string;
   severity: RiskSeverity;
-  /** Alta = evidência clara na imagem; baixa = inferência / dúvida. */
+  /** High means clear image evidence; low means inference or uncertainty. */
   confidence?: AnalysisConfidence;
-  /** O que o inspetor deve verificar se houver dúvida. */
+  /** What the inspector should verify when there is uncertainty. */
   uncertaintyNote?: string;
+  /** Visual evidence used to support this risk. */
+  evidence?: string[];
 };
 
 export type AnalysisControl = {
@@ -46,7 +81,7 @@ export type AnalysisNr = {
   relevance: string;
 };
 
-/** Provider da análise de foto (somente OpenAI Vision no fluxo oficial). */
+/** Photo analysis provider: only OpenAI Vision in the official flow. */
 export type AnalysisAiProvider = 'openai';
 
 export type AnalysisResult = {
@@ -56,13 +91,21 @@ export type AnalysisResult = {
   provider: AnalysisAiProvider;
   model?: string;
   analyzedAt: string;
-  /** Confiança geral da leitura da cena. */
+  /** Overall scene classification. */
+  sceneType?: AnalysisSceneType;
+  /** Executive summary for risk/no-risk/not-applicable states. */
+  complianceSummary?: AnalysisComplianceSummary;
+  /** NRs retrieved as grounding context for the report. */
+  retrievalContext?: AnalysisRetrievalContext[];
+  /** Optional photographic inspection report, generated only when requested. */
+  inspectionReport?: InspectionReport;
+  /** Overall confidence for the scene reading. */
   overallConfidence?: AnalysisConfidence;
-  /** true se a IA pede revisão humana / complementar a foto. */
+  /** true when the AI requests human review or more context. */
   needsInspectorReview?: boolean;
-  /** Resumo do que o inspetor deve checar ou complementar. */
+  /** Summary of what the inspector should check or add. */
   inspectorGuidance?: string;
-  /** Limitações da análise (ângulo, iluminação, elementos não visíveis). */
+  /** Analysis limitations such as angle, lighting, or invisible elements. */
   limitations?: string[];
 };
 
@@ -78,6 +121,8 @@ export type AnalysisRecord = {
   result?: AnalysisResult;
   errorMessage?: string;
   localOnly?: boolean;
-  /** Contexto livre do inspetor enviado à IA (opcional). */
+  /** Free context sent by the inspector to the AI. */
   inspectorNote?: string;
+  /** User requested a report based on this photo. */
+  reportRequested?: boolean;
 };

@@ -5,12 +5,17 @@ import {
   buildAnalysisUserText,
 } from './_shared/analysis-prompt';
 import { extractJsonObject, parseAnalysisPayload } from './_shared/parse-analysis';
+import {
+  formatNrContextForPrompt,
+  retrieveNrContext,
+} from './_shared/retrieve-nr-context';
 
 type Body = {
   imageBase64?: string;
   mimeType?: string;
   model?: string;
   inspectorNote?: string;
+  generateReport?: boolean;
 };
 
 function json(status: number, payload: unknown) {
@@ -91,9 +96,18 @@ export default async (req: Request, _context: Context) => {
     'gpt-4o-mini';
   const inspectorNote =
     typeof body.inspectorNote === 'string' ? body.inspectorNote.trim() : '';
+  const generateReport = body.generateReport === true;
 
   const dataUrl = `data:${mimeType};base64,${imageBase64}`;
-  const userText = buildAnalysisUserText(inspectorNote || undefined);
+  const retrievalContext = retrieveNrContext({
+    inspectorNote: inspectorNote || undefined,
+    maxItems: 8,
+  });
+  const nrContextText = formatNrContextForPrompt(retrievalContext);
+  const userText = `${buildAnalysisUserText(inspectorNote || undefined, generateReport)}
+
+Contexto normativo recuperado da base NR (use apenas quando fizer sentido para a cena; nao force enquadramento):
+${nrContextText || '- Nenhum contexto especifico recuperado.'}`;
 
   let openAiRes: Response;
   try {
@@ -170,6 +184,10 @@ export default async (req: Request, _context: Context) => {
     const parsed = parseAnalysisPayload(extractJsonObject(content));
     return json(200, {
       ...parsed,
+      retrievalContext:
+        parsed.retrievalContext && parsed.retrievalContext.length > 0
+          ? parsed.retrievalContext
+          : retrievalContext,
       provider: 'openai',
       model,
       analyzedAt: new Date().toISOString(),

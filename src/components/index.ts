@@ -8,6 +8,8 @@ export { ErrorState, safeBack } from '@/src/components/ErrorState';
 export { Surface } from '@/src/components/Surface';
 export { BackLink } from '@/src/components/BackLink';
 export { QuickAccessCard } from '@/src/components/QuickAccessCard';
+export { InspectionReportCard } from '@/src/components/InspectionReportCard';
+export { RiskLevelMeter } from '@/src/components/RiskLevelMeter';
 export { FilterChips, type FilterChipOption } from '@/src/components/FilterChips';
 export {
   Display,

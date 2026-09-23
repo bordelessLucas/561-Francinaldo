@@ -98,6 +98,23 @@
 
 ---
 
+## Sprint atual — IA assertiva + RAG + NRs
+- [x] Catálogo completo de NRs no app
+- [x] Contrato de IA permite zero riscos quando não houver não conformidade visível
+- [x] Contrato de IA identifica foto fora de contexto SST sem inventar relatório
+- [x] RAG server-side recupera NRs relevantes e registra contexto usado
+- [x] Relatório exibe evidências, incertezas, estado positivo e estado não aplicável
+- [ ] Bateria manual de avaliação cobre falso positivo, sem problema visível, fora de contexto e foto ruim
+- [x] Voz antes do envio da foto planejada como etapa posterior
+- [ ] Voz antes do envio validada em dispositivo com Netlify/OpenAI STT
+- [x] Relatório fotográfico opcional solicitado antes do envio
+- [x] Ajustes iniciais de UI do cliente + mascote Alpha Wolf
+- [x] Medidor visual de nível de risco no padrão verde-amarelo-vermelho
+- [x] Resultado sem cards vazios quando não há riscos/controles/NRs
+- [ ] Ajustes de UI do cliente validados em dispositivo
+
+---
+
 ## Sprint 9 — Notificações de atualização de NRs
 - [x] Permissão de push no dispositivo  
 - [x] Cadastro do device / usuário para push (`devices`)  

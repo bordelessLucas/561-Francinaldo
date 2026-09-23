@@ -6,9 +6,20 @@ const appJson = require('./app.json');
  */
 module.exports = () => {
   const baseExtra = appJson.expo.extra ?? {};
+  const basePlugins = appJson.expo.plugins ?? [];
   return {
     expo: {
       ...appJson.expo,
+      plugins: [
+        ...basePlugins,
+        [
+          'expo-audio',
+          {
+            microphonePermission:
+              'Permitir acesso ao microfone para gravar contexto antes da análise.',
+          },
+        ],
+      ],
       extra: {
         ...baseExtra,
         aiAnalyzeUrl: process.env.EXPO_PUBLIC_AI_ANALYZE_URL ?? baseExtra.aiAnalyzeUrl ?? '',
