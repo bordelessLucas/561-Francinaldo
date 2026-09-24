@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import { useLocalSearchParams, type Href } from 'expo-router';
 
 import { useAppTheme } from '@/contexts/ThemeContext';
@@ -70,14 +70,31 @@ export function LibraryDocumentScreen() {
         ) : null}
       </Surface>
 
-      <Surface tone="accent" className="mt-4">
-        <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
-          Arquivo em breve
-        </Caption>
-        <Caption className="mt-1" style={{ color: colors.brandDark }}>
-          O PDF completo ainda não está disponível. Você está vendo só o resumo do catálogo.
-        </Caption>
-      </Surface>
+      {document.officialUrl ? (
+        <Surface tone="accent" className="mt-4">
+          <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
+            Documento oficial
+          </Caption>
+          <Caption className="mt-1" style={{ color: colors.brandDark }}>
+            Abra a norma completa na fonte oficial do Ministério do Trabalho e Emprego.
+          </Caption>
+          <Button
+            label="Abrir documento completo"
+            variant="secondary"
+            onPress={() => Linking.openURL(document.officialUrl!)}
+            className="mt-4"
+          />
+        </Surface>
+      ) : (
+        <Surface tone="accent" className="mt-4">
+          <Caption className="font-sansSemi" style={{ color: colors.brandDark }}>
+            Arquivo em breve
+          </Caption>
+          <Caption className="mt-1" style={{ color: colors.brandDark }}>
+            O arquivo completo ainda não está disponível. Você está vendo só o resumo do catálogo.
+          </Caption>
+        </Surface>
+      )}
 
       <Button
         label="Voltar à lista"

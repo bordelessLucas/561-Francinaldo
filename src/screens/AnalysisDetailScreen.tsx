@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect, type Href } from 'expo-router';
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,7 @@ import {
   safeBack,
 } from '@/src/components';
 import { getAnalysisById } from '@/src/services/analysis.service';
+import { getNrByCode } from '@/src/data/nrs';
 
 const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   low: 'Baixa',
@@ -209,7 +210,7 @@ export function AnalysisDetailScreen() {
                     </Label>
                     <Caption>{risk.description}</Caption>
                     {risk.evidence?.map((item) => (
-                      <Caption key={item}>Evid?ncia: {item}</Caption>
+                      <Caption key={item}>Evidência: {item}</Caption>
                     ))}
                     {risk.uncertaintyNote ? (
                       <Caption style={{ color: colors.signal }}>
@@ -246,14 +247,39 @@ export function AnalysisDetailScreen() {
             <Surface>
               <Label>NRs relacionadas</Label>
               <View className="mt-4 gap-3">
-                {result.nrs.map((nr, index) => (
-                  <View key={`${nr.code}-${index}`} className="gap-1">
-                    <Label>
-                      {nr.code} — {nr.title}
-                    </Label>
-                    <Caption>{nr.relevance}</Caption>
-                  </View>
-                ))}
+                {result.nrs.map((nr, index) => {
+                  const catalogNr = getNrByCode(nr.code);
+                  return (
+                    <Pressable
+                      accessibilityRole={catalogNr ? 'button' : undefined}
+                      key={`${nr.code}-${index}`}
+                      className="rounded-2xl px-3 py-3"
+                      style={{
+                        backgroundColor: colors.canvasElev,
+                        borderWidth: 1,
+                        borderColor: colors.line,
+                      }}
+                      onPress={
+                        catalogNr
+                          ? () =>
+                              router.push(
+                                `/(app)/library/nrs/${catalogNr.code.toLowerCase()}` as Href,
+                              )
+                          : undefined
+                      }
+                    >
+                      <Label>
+                        {nr.code} - {nr.title}
+                      </Label>
+                      <Caption className="mt-1">{nr.relevance}</Caption>
+                      {catalogNr ? (
+                        <Caption className="mt-2" style={{ color: colors.brandDark }}>
+                          Abrir norma completa
+                        </Caption>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </View>
             </Surface>
           ) : null}

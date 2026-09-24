@@ -51,7 +51,7 @@ export function LibraryCategoryScreen() {
             <Label>{doc.title}</Label>
             <Caption className="mt-2">{doc.summary}</Caption>
             <Caption className="mt-3" style={{ color: colors.brandDark }}>
-              {doc.meta} · só resumo
+              {doc.meta} · {doc.officialUrl ? 'documento oficial' : 'só resumo'}
             </Caption>
           </Surface>
         ))}

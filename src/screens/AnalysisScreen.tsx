@@ -25,18 +25,19 @@ import type {
   AnalysisSource,
   RiskSeverity,
 } from '@/lib/types';
+import { getNrByCode } from '@/src/data/nrs';
 import {
   BackLink,
   Body,
   Button,
   Caption,
   Container,
-  Heading,
   InspectionReportCard,
   Label,
   RiskLevelMeter,
   Surface,
 } from '@/src/components';
+import { askAnalysisQuestion } from '@/src/services/analysis-assistant.service';
 import {
   runAnalysisQueue,
   type AnalysisQueueItem,
@@ -50,7 +51,8 @@ import {
 } from '@/src/services/media.service';
 import { transcribeInspectorNote } from '@/src/services/dictation.service';
 
-type Step = 'idle' | 'preview' | 'analyzing' | 'result' | 'batch_result' | 'error';
+type Step = 'assistant' | 'idle' | 'preview' | 'analyzing' | 'result' | 'batch_result' | 'error';
+
 const MASCOT_IMAGE = require('@/assets/brand/alpha-mascot-transparent.png');
 
 const BLUE_UI = {
@@ -66,21 +68,21 @@ const BLUE_UI = {
 
 const SEVERITY_LABEL: Record<RiskSeverity, string> = {
   low: 'Baixa',
-  medium: 'MÃ©dia',
+  medium: 'Média',
   high: 'Alta',
 };
 
 const QUEUE_STATUS_LABEL: Record<AnalysisQueueItem['status'], string> = {
   queued: 'Na fila',
   analyzing: 'Analisando',
-  done: 'ConcluÃ­da',
+  done: 'Concluída',
   failed: 'Falhou',
 };
 
 function getComplianceTitle(result: AnalysisResult): string {
   switch (result.complianceSummary) {
     case 'no_visible_issue':
-      return 'Sem problema visivel na foto';
+      return 'Sem problema visível na foto';
     case 'not_applicable':
       return 'Imagem fora do contexto SST';
     case 'needs_more_context':
@@ -96,13 +98,13 @@ function getComplianceBody(result: AnalysisResult): string {
   if (result.inspectorGuidance) return result.inspectorGuidance;
   switch (result.complianceSummary) {
     case 'no_visible_issue':
-      return 'A IA nao encontrou nao conformidade visivel nesta imagem. Valide no local e complemente se houver algo fora do enquadramento.';
+      return 'A IA não encontrou não conformidade visível nesta imagem. Valide no local e complemente se houver algo fora do enquadramento.';
     case 'not_applicable':
-      return 'A imagem nao parece mostrar um ambiente de trabalho ou situacao avaliavel de SST.';
+      return 'A imagem não parece mostrar um ambiente de trabalho ou situação avaliável de SST.';
     case 'needs_more_context':
-      return 'A imagem nao traz informacao suficiente para um relatorio confiavel. Envie outra foto ou detalhe o contexto.';
+      return 'A imagem não traz informação suficiente para um relatório confiável. Envie outra foto ou detalhe o contexto.';
     default:
-      return 'A ferramenta apoia a inspecao; valide no local antes de decisoes criticas.';
+      return 'A ferramenta apoia a inspeção; valide no local antes de decisões críticas.';
   }
 }
 
@@ -110,34 +112,34 @@ function getCaptureErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     switch (error.message) {
       case 'CAMERA_PERMISSION_DENIED':
-        return 'PermissÃ£o de cÃ¢mera negada. Ative nas configuraÃ§Ãµes do aparelho.';
+        return 'Permissão de câmera negada. Ative nas configurações do aparelho.';
       case 'GALLERY_PERMISSION_DENIED':
-        return 'PermissÃ£o de galeria negada. Ative nas configuraÃ§Ãµes do aparelho.';
+        return 'Permissão de galeria negada. Ative nas configurações do aparelho.';
       case 'IMAGE_READ_FAILED':
-        return 'NÃ£o foi possÃ­vel ler a imagem selecionada.';
+        return 'Não foi possível ler a imagem selecionada.';
       case 'AI_MISSING_IMAGE':
         return 'Selecione ao menos uma imagem para continuar.';
       case 'AI_PROVIDER_NOT_READY':
-        return 'A anÃ¡lise assistida estÃ¡ indisponÃ­vel. Configure OPENAI_API_KEY ou a URL da API Netlify.';
+        return 'A análise assistida está indisponível. Configure OPENAI_API_KEY ou a URL da API Netlify.';
       case 'AI_AUTH_FAILED':
-        return 'Falha de autenticaÃ§Ã£o com a IA. Confira a chave OpenAI no ambiente.';
+        return 'Falha de autenticação com a IA. Confira a chave OpenAI no ambiente.';
       case 'AI_QUOTA_EXCEEDED':
-        return 'A conta OpenAI estÃ¡ sem crÃ©ditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
+        return 'A conta OpenAI está sem créditos. Adicione saldo em platform.openai.com (Billing) e tente de novo.';
       case 'AI_BAD_IMAGE':
-        return 'A imagem nÃ£o pÃ´de ser analisada. Tente outra foto (boa iluminaÃ§Ã£o, JPEG).';
+        return 'A imagem não pôde ser analisada. Tente outra foto (boa iluminação, JPEG).';
       case 'AI_BAD_REQUEST':
-        return 'Pedido de anÃ¡lise invÃ¡lido. Tente novamente com outra foto.';
+        return 'Pedido de análise inválido. Tente novamente com outra foto.';
       case 'AI_NETWORK_ERROR':
-        return 'Falha de rede ao falar com a IA. Verifique a conexÃ£o e tente de novo.';
+        return 'Falha de rede ao falar com a IA. Verifique a conexão e tente de novo.';
       case 'AI_UPSTREAM_ERROR':
-        return 'O provedor de IA nÃ£o respondeu corretamente. Tente novamente em instantes.';
+        return 'O provedor de IA não respondeu corretamente. Tente novamente em instantes.';
       case 'AI_INVALID_JSON':
       case 'AI_INVALID_PAYLOAD':
       case 'AI_EMPTY_RISKS':
       case 'AI_EMPTY_RESPONSE':
         return 'A IA retornou um resultado incompleto. Tente outra foto, acrescente um contexto ou tente de novo.';
       case 'STORAGE_UPLOAD_DISABLED':
-        return 'A anÃ¡lise nÃ£o depende de armazenamento na nuvem. Tente novamente o fluxo local.';
+        return 'A análise não depende de armazenamento na nuvem. Tente novamente o fluxo local.';
       default:
         break;
     }
@@ -149,36 +151,36 @@ function getCaptureErrorMessage(error: unknown): string {
       : '';
 
   if (code.startsWith('storage/')) {
-    return 'Falha no envio da imagem. Verifique a conexÃ£o e tente de novo.';
+    return 'Falha no envio da imagem. Verifique a conexão e tente de novo.';
   }
   if (code === 'permission-denied') {
-    return 'Sem permissÃ£o para registrar a anÃ¡lise. FaÃ§a login novamente.';
+    return 'Sem permissão para registrar a análise. Faça login novamente.';
   }
 
-  return 'NÃ£o foi possÃ­vel concluir a anÃ¡lise. Tente novamente.';
+  return 'Não foi possível concluir a análise. Tente novamente.';
 }
 
 function getDictationErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     switch (error.message) {
       case 'STT_PROVIDER_NOT_READY':
-        return 'Configure a URL da API Netlify para transcrever audio com seguranca.';
+        return 'Configure a URL da API Netlify para transcrever áudio com segurança.';
       case 'STT_NETWORK_ERROR':
-        return 'Falha de rede ao transcrever o audio. Verifique a conexao e tente de novo.';
+        return 'Falha de rede ao transcrever o áudio. Verifique a conexão e tente de novo.';
       case 'STT_MISSING_AUDIO':
       case 'STT_BAD_AUDIO':
-        return 'Nao foi possivel ler o audio gravado. Grave novamente mais perto do microfone.';
+        return 'Não foi possível ler o áudio gravado. Grave novamente mais perto do microfone.';
       case 'AI_AUTH_FAILED':
-        return 'Falha de autenticacao com a IA. Confira a chave OpenAI no servidor.';
+        return 'Falha de autenticação com a IA. Confira a chave OpenAI no servidor.';
       case 'AI_QUOTA_EXCEEDED':
-        return 'A conta OpenAI esta sem creditos para transcrever agora.';
+        return 'A conta OpenAI está sem créditos para transcrever agora.';
       case 'STT_EMPTY_RESPONSE':
-        return 'Nao identifiquei fala no audio. Tente gravar novamente.';
+        return 'Não identifiquei fala no áudio. Tente gravar novamente.';
       default:
         break;
     }
   }
-  return 'Nao foi possivel transcrever o audio. Tente novamente ou digite o contexto.';
+  return 'Não foi possível transcrever o áudio. Tente novamente ou digite o contexto.';
 }
 
 function mergeBatch(current: PickedImage[], incoming: PickedImage[]): PickedImage[] {
@@ -193,15 +195,26 @@ function mergeBatch(current: PickedImage[], incoming: PickedImage[]): PickedImag
   return next;
 }
 
+async function waitForRecordingUri(
+  recorder: ReturnType<typeof useAudioRecorder>,
+): Promise<string> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const uri = recorder.uri || recorder.getStatus().url;
+    if (uri) return uri;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  throw new Error('STT_MISSING_AUDIO');
+}
+
 /**
- * AnÃ¡lise em lote â€” vÃ¡rias fotos na UI; fila sequencial (1 Vision por vez).
+ * Análise em lote - várias fotos na UI; fila sequencial (1 Vision por vez).
  */
 export function AnalysisScreen() {
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
-  const [step, setStep] = useState<Step>('idle');
+  const [step, setStep] = useState<Step>('assistant');
   const [batch, setBatch] = useState<PickedImage[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [picking, setPicking] = useState(false);
@@ -215,6 +228,9 @@ export function AnalysisScreen() {
   const [dictationError, setDictationError] = useState<string | null>(null);
   const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [lastInspectorNote, setLastInspectorNote] = useState<string | null>(null);
+  const [preQuestion, setPreQuestion] = useState('');
+  const [preAnswer, setPreAnswer] = useState<string | null>(null);
+  const [askingAssistant, setAskingAssistant] = useState(false);
   const [queueItems, setQueueItems] = useState<AnalysisQueueItem[]>([]);
   const [queueProgress, setQueueProgress] = useState({ index: 0, total: 0 });
   const analysisRunIdRef = useRef(0);
@@ -241,18 +257,62 @@ export function AnalysisScreen() {
     setDictationError(null);
     setTranscribingAudio(false);
     setLastInspectorNote(null);
+    setPreQuestion('');
+    setPreAnswer(null);
+    setAskingAssistant(false);
     setQueueItems([]);
     setQueueProgress({ index: 0, total: 0 });
     setError(null);
   }, []);
 
+  function buildInspectorContext(): string | undefined {
+    const parts: string[] = [];
+    const question = preQuestion.trim();
+    const answer = preAnswer?.trim();
+    const note = inspectorNote.trim();
+    if (question || answer) {
+      parts.push(
+        [
+          'Dúvida respondida antes da foto:',
+          question ? `Pergunta do inspetor: ${question}` : '',
+          answer ? `Resposta da IA: ${answer}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+    }
+    if (note) {
+      parts.push(`Contexto adicional do inspetor: ${note}`);
+    }
+    return parts.length > 0 ? parts.join('\n\n') : undefined;
+  }
+
+  async function handleAskAssistant() {
+    const question = preQuestion.trim();
+    if (!question) {
+      setError('Digite sua dúvida antes de perguntar para a IA.');
+      return;
+    }
+
+    setError(null);
+    setAskingAssistant(true);
+    try {
+      const answer = await askAnalysisQuestion({ question });
+      setPreAnswer(answer);
+    } catch (err) {
+      setError(getCaptureErrorMessage(err));
+    } finally {
+      setAskingAssistant(false);
+    }
+  }
+
   async function handleAddFromCamera() {
     if (!user) {
-      setError('FaÃ§a login para registrar uma anÃ¡lise.');
+      setError('Faça login para registrar uma análise.');
       return;
     }
     if (remainingSlots <= 0) {
-      setError(`VocÃª pode enviar atÃ© ${MAX_ANALYSIS_BATCH} fotos por vez.`);
+      setError(`Você pode enviar até ${MAX_ANALYSIS_BATCH} fotos por vez.`);
       return;
     }
 
@@ -279,11 +339,11 @@ export function AnalysisScreen() {
 
   async function handleAddFromGallery() {
     if (!user) {
-      setError('FaÃ§a login para registrar uma anÃ¡lise.');
+      setError('Faça login para registrar uma análise.');
       return;
     }
     if (remainingSlots <= 0) {
-      setError(`VocÃª pode enviar atÃ© ${MAX_ANALYSIS_BATCH} fotos por vez.`);
+      setError(`Você pode enviar até ${MAX_ANALYSIS_BATCH} fotos por vez.`);
       return;
     }
 
@@ -324,7 +384,7 @@ export function AnalysisScreen() {
 
   async function handleConfirmBatch() {
     if (!user) {
-      setError('FaÃ§a login para registrar uma anÃ¡lise.');
+      setError('Faça login para registrar uma análise.');
       return;
     }
     if (batch.length === 0) {
@@ -332,7 +392,7 @@ export function AnalysisScreen() {
       return;
     }
 
-    const note = inspectorNote.trim() || undefined;
+    const note = buildInspectorContext();
     const runId = ++analysisRunIdRef.current;
     setError(null);
     setStep('analyzing');
@@ -402,10 +462,7 @@ export function AnalysisScreen() {
           allowsRecording: false,
           playsInSilentMode: true,
         });
-        const uri = recorder.uri || recorder.getStatus().url;
-        if (!uri) {
-          throw new Error('STT_MISSING_AUDIO');
-        }
+        const uri = await waitForRecordingUri(recorder);
         const text = await transcribeInspectorNote({ localUri: uri });
         setInspectorNote((current) => {
           const prefix = current.trim();
@@ -427,7 +484,7 @@ export function AnalysisScreen() {
       recorder.record({ forDuration: 90 });
     } catch (err) {
       if (err instanceof Error && err.message === 'MIC_PERMISSION_DENIED') {
-        setDictationError('Permissao de microfone negada. Ative nas configuracoes do aparelho.');
+        setDictationError('Permissão de microfone negada. Ative nas configurações do aparelho.');
       } else {
         setDictationError(getDictationErrorMessage(err));
       }
@@ -438,12 +495,12 @@ export function AnalysisScreen() {
 
   async function handleReanalyzeSingle() {
     if (!user || !sessionUri) {
-      setError('A foto desta sessÃ£o nÃ£o estÃ¡ mais disponÃ­vel. Monte um novo lote.');
+      setError('A foto desta sessão não está mais disponível. Monte um novo lote.');
       setStep('idle');
       return;
     }
     if (!inspectorNote.trim()) {
-      setError('Descreva o que a IA nÃ£o identificou ou o contexto extra para reanalisar.');
+      setError('Descreva o que a IA não identificou ou o contexto extra para reanalisar.');
       return;
     }
 
@@ -486,7 +543,7 @@ export function AnalysisScreen() {
     const failed = queueItems.filter((item) => item.status === 'failed');
     if (failed.length === 0) return;
 
-    const note = inspectorNote.trim() || lastInspectorNote || undefined;
+    const note = buildInspectorContext() || lastInspectorNote || undefined;
     const runId = ++analysisRunIdRef.current;
     setError(null);
     setStep('analyzing');
@@ -530,12 +587,12 @@ export function AnalysisScreen() {
 
   function handleNewAnalysis() {
     resetSession();
-    setStep('idle');
+    setStep('assistant');
   }
 
   function handleLeaveFlow() {
     resetSession();
-    setStep('idle');
+    setStep('assistant');
     if (router.canGoBack()) {
       router.back();
       return;
@@ -546,11 +603,11 @@ export function AnalysisScreen() {
   const analyzingLabel =
     queueProgress.total > 1
       ? `Analisando foto ${Math.min(queueProgress.index + 1, queueProgress.total)} de ${queueProgress.total}`
-      : 'Analisando com IAâ€¦';
+      : 'Analisando com IA...';
 
   return (
     <Container scroll>
-      {step !== 'idle' ? (
+      {step !== 'assistant' ? (
         <BackLink
           className="mb-2 mt-2"
           label={step === 'analyzing' ? 'Cancelar' : 'Voltar'}
@@ -559,72 +616,171 @@ export function AnalysisScreen() {
         />
       ) : null}
 
-      <View className="mb-4 mt-2 flex-row items-center gap-3">
-        <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 76, height: 92 }} />
-        <View className="flex-1 rounded-2xl px-4 py-3" style={{ backgroundColor: colors.canvasElev }}>
-          <Label>Alpha Wolf</Label>
-          <Caption className="mt-1">Me diga o contexto e envie a foto para eu analisar.</Caption>
-        </View>
-      </View>
+      {step === 'assistant' ? (
+        <View className="flex-1 gap-4" style={{ flexGrow: 1 }}>
+          <View
+            className="flex-1 justify-between gap-6 rounded-[28px] px-5 py-5"
+            style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
+          >
+            <View className="gap-5">
+              <View className="flex-row items-start gap-4">
+                <Image source={MASCOT_IMAGE} className="h-24 w-20" resizeMode="contain" />
+                <View className="flex-1 rounded-3xl px-4 py-4" style={{ backgroundColor: BLUE_UI.panel }}>
+                  <Text className="font-sansSemi text-lg" style={{ color: BLUE_UI.text }}>
+                    Alpha Wolf
+                  </Text>
+                  <Text className="mt-2 font-sans text-sm leading-5" style={{ color: BLUE_UI.muted }}>
+                    Tire sua dúvida antes da foto. Depois toque em iniciar para abrir a câmera.
+                  </Text>
+                </View>
+              </View>
 
-      <View className="mb-8 mt-2 gap-2">
-        <Heading>Nova anÃ¡lise</Heading>
-        <Body>
-          Envie uma ou vÃ¡rias fotos do campo. O Alpha SST analisa cada situaÃ§Ã£o com a IA e
-          organiza o resultado para o inspetor.
-        </Body>
-      </View>
+              <View>
+                <Text className="font-sansSemi text-4xl" style={{ color: BLUE_UI.text }}>
+                  Nova análise
+                </Text>
+                <Text className="mt-3 font-sans text-base leading-7" style={{ color: BLUE_UI.muted }}>
+                  Pergunte algo para a IA antes de registrar a situação ou vá direto para a câmera, como no fluxo de captura do WhatsApp.
+                </Text>
+              </View>
+
+              <TextInput
+                value={preQuestion}
+                onChangeText={setPreQuestion}
+                placeholder="Ex.: o que devo observar em painel elétrico aberto?"
+                placeholderTextColor={BLUE_UI.muted}
+                multiline
+                textAlignVertical="top"
+                className="min-h-[120px] rounded-2xl border px-4 py-3 font-sans text-base"
+                style={{
+                  color: BLUE_UI.text,
+                  backgroundColor: BLUE_UI.panelSoft,
+                  borderColor: BLUE_UI.border,
+                }}
+              />
+              <Pressable
+                accessibilityRole="button"
+                disabled={!preQuestion.trim() || askingAssistant}
+                onPress={handleAskAssistant}
+                className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+                style={{ backgroundColor: BLUE_UI.blue, opacity: !preQuestion.trim() || askingAssistant ? 0.6 : 1 }}
+              >
+                {askingAssistant ? (
+                  <ActivityIndicator color={BLUE_UI.text} />
+                ) : (
+                  <Ionicons name="chatbubble-ellipses-outline" size={20} color={BLUE_UI.text} />
+                )}
+                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                  Perguntar para a IA
+                </Text>
+              </Pressable>
+
+              {preAnswer ? (
+                <View
+                  className="rounded-[24px] px-5 py-4"
+                  style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
+                >
+                  <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
+                    Resposta da IA
+                  </Text>
+                  <Text className="mt-2 font-sans text-sm leading-5" style={{ color: BLUE_UI.muted }}>
+                    {preAnswer}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View className="gap-3">
+              <Pressable
+                accessibilityRole="button"
+                disabled={picking}
+                onPress={() => {
+                  setError(null);
+                  setStep('idle');
+                }}
+                className="min-h-16 flex-row items-center justify-center gap-3 rounded-2xl px-5"
+                style={{ backgroundColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+              >
+                <Ionicons name="camera" size={22} color={BLUE_UI.text} />
+                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                  {preAnswer ? 'Iniciar análise com foto' : 'Pular e iniciar análise'}
+                </Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={picking}
+                onPress={handleAddFromGallery}
+                className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border px-5"
+                style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+              >
+                <Ionicons name="images-outline" size={20} color={BLUE_UI.text} />
+                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                  Escolher fotos da galeria
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
 
       {step === 'idle' ? (
         <View
-          className="gap-4 rounded-[28px] px-4 py-5"
+          className="flex-1 justify-between rounded-[28px] px-5 py-5"
           style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
         >
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="font-sansSemi text-lg" style={{ color: BLUE_UI.text }}>
-                SST ALERTA
+              <Text className="font-sansSemi text-sm uppercase" style={{ color: BLUE_UI.muted }}>
+                SST Alerta
               </Text>
-              <Text className="mt-2 font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                ANALISE DE RISCO POR IA
+              <Text className="mt-1 font-sansSemi text-xl" style={{ color: BLUE_UI.text }}>
+                Registrar situação
               </Text>
             </View>
-            <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 54, height: 64 }} />
+            <Image source={MASCOT_IMAGE} className="h-16 w-14" resizeMode="contain" />
           </View>
 
           <View
-            className="rounded-3xl px-4 py-5"
-            style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
+            className="my-6 flex-1 items-center justify-center rounded-[28px] border px-6"
+            style={{ backgroundColor: BLUE_UI.panel, borderColor: BLUE_UI.border }}
           >
-            <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
-              Registrar situacoes
+            <View
+              className="h-40 w-40 items-center justify-center rounded-full border"
+              style={{ backgroundColor: BLUE_UI.panelSoft, borderColor: BLUE_UI.border }}
+            >
+              <Ionicons name="camera" size={64} color={BLUE_UI.text} />
+            </View>
+            <Text className="mt-8 text-center font-sansSemi text-2xl" style={{ color: BLUE_UI.text }}>
+              Câmera pronta
             </Text>
-            <Text className="mt-2 font-sans text-sm leading-5" style={{ color: BLUE_UI.muted }}>
-              Tire uma foto em campo ou escolha imagens da galeria. O Alpha Wolf analisa riscos, controles e NRs.
+            <Text className="mt-3 text-center font-sans text-sm leading-6" style={{ color: BLUE_UI.muted }}>
+              Tire uma foto agora ou escolha imagens da galeria antes de começar a análise.
             </Text>
+          </View>
 
+          <View className="gap-4">
             <Pressable
               accessibilityRole="button"
               disabled={picking}
               onPress={handleAddFromCamera}
-              className="mt-5 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+              className="min-h-16 flex-row items-center justify-center gap-3 rounded-2xl px-5"
               style={{ backgroundColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
             >
-              {picking ? <ActivityIndicator color={BLUE_UI.text} /> : <Ionicons name="camera" size={20} color={BLUE_UI.text} />}
+              {picking ? <ActivityIndicator color={BLUE_UI.text} /> : <Ionicons name="camera" size={24} color={BLUE_UI.text} />}
               <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                TIRAR FOTO PARA ANALISAR
+                Tirar foto
               </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               disabled={picking}
               onPress={handleAddFromGallery}
-              className="mt-3 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border px-5"
+              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border px-5"
               style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
             >
               <Ionicons name="images-outline" size={20} color={BLUE_UI.text} />
               <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                ESCOLHER FOTOS DA GALERIA
+                Escolher fotos da galeria
               </Text>
             </Pressable>
           </View>
@@ -661,7 +817,7 @@ export function AnalysisScreen() {
                   className="h-80 w-full"
                   style={{ backgroundColor: BLUE_UI.panelSoft }}
                   resizeMode="cover"
-                  accessibilityLabel="Pre-visualizacao da situacao"
+                  accessibilityLabel="Pre-visualizacao da situação"
                 />
               ) : null}
               <View className="absolute left-4 top-4 h-9 w-9 rounded-tl-2xl border-l-2 border-t-2" style={{ borderColor: BLUE_UI.text }} />
@@ -688,11 +844,11 @@ export function AnalysisScreen() {
               >
                 <Ionicons name="camera" size={20} color={BLUE_UI.text} />
                 <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                  {batch.length === 1 ? 'TIRAR FOTO PARA ANALISAR' : `ANALISAR ${batch.length} FOTOS`}
+                  {batch.length === 1 ? 'Analisar esta foto' : `Analisar ${batch.length} fotos`}
                 </Text>
               </Pressable>
               <Caption className="mt-3 text-center" style={{ color: BLUE_UI.muted }}>
-                Contexto e relatorio sao opcionais antes do envio.
+                Contexto e relatório são opcionais antes de analisar.
               </Caption>
             </View>
           </View>
@@ -702,20 +858,39 @@ export function AnalysisScreen() {
               {batch.map((item, index) => {
                 const selected = index === activeIndex;
                 return (
-                  <Pressable
+                  <View
                     key={item.localUri}
-                    onPress={() => setActiveIndex(index)}
-                    className="overflow-hidden rounded-2xl"
+                    className="relative"
                     style={{
-                      borderWidth: 2,
-                      borderColor: selected ? BLUE_UI.blue : BLUE_UI.border,
+                      width: 82,
+                      height: 82,
                     }}
                   >
-                    <Image
-                      source={{ uri: item.localUri }}
-                      style={{ width: 72, height: 72, backgroundColor: BLUE_UI.panelSoft }}
-                    />
-                  </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Selecionar foto ${index + 1}`}
+                      onPress={() => setActiveIndex(index)}
+                      className="absolute bottom-0 left-0 overflow-hidden rounded-2xl"
+                      style={{
+                        borderWidth: 2,
+                        borderColor: selected ? BLUE_UI.blue : BLUE_UI.border,
+                      }}
+                    >
+                      <Image
+                        source={{ uri: item.localUri }}
+                        style={{ width: 72, height: 72, backgroundColor: BLUE_UI.panelSoft }}
+                      />
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remover foto ${index + 1}`}
+                      onPress={() => handleRemovePhoto(item.localUri)}
+                      className="absolute right-0 top-0 h-7 w-7 items-center justify-center rounded-full border"
+                      style={{ backgroundColor: BLUE_UI.bg, borderColor: BLUE_UI.border }}
+                    >
+                      <Ionicons name="close" size={15} color={BLUE_UI.text} />
+                    </Pressable>
+                  </View>
                 );
               })}
             </View>
@@ -724,56 +899,52 @@ export function AnalysisScreen() {
           <View className="flex-row flex-wrap gap-2">
             {remainingSlots > 0 ? (
               <>
-                <Button
-                  label="Adicionar foto"
-                  variant="outline"
+                <Pressable
+                  accessibilityRole="button"
                   onPress={handleAddFromCamera}
-                  loading={picking}
-                  className="min-h-12 flex-1"
-                  style={{ borderColor: BLUE_UI.blue }}
-                />
-                <Button
-                  label="Galeria"
-                  variant="outline"
+                  disabled={picking}
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border px-4"
+                  style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+                >
+                  {picking ? <ActivityIndicator color={BLUE_UI.text} /> : <Ionicons name="camera-outline" size={18} color={BLUE_UI.text} />}
+                  <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                    Adicionar foto
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
                   onPress={handleAddFromGallery}
                   disabled={picking}
-                  className="min-h-12 flex-1"
-                  style={{ borderColor: BLUE_UI.blue }}
-                />
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border px-4"
+                  style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
+                >
+                  <Ionicons name="images-outline" size={18} color={BLUE_UI.text} />
+                  <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                    Galeria
+                  </Text>
+                </Pressable>
               </>
             ) : (
               <Caption style={{ color: BLUE_UI.muted }}>Lote completo ({MAX_ANALYSIS_BATCH} fotos).</Caption>
             )}
           </View>
 
-          {activePhoto ? (
-            <Button
-              label="Remover foto selecionada"
-              variant="secondary"
-              onPress={() => handleRemovePhoto(activePhoto.localUri)}
-              style={{ backgroundColor: BLUE_UI.panel, borderColor: BLUE_UI.border }}
-            />
-          ) : null}
-
           <View
             className="rounded-3xl px-4 py-4"
             style={{ backgroundColor: BLUE_UI.panel, borderWidth: 1, borderColor: BLUE_UI.border }}
           >
-            <View className="flex-row items-center gap-3">
-              <Image source={MASCOT_IMAGE} resizeMode="contain" style={{ width: 46, height: 56 }} />
-              <View className="flex-1">
-                <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
-                  Fale com o Alpha Wolf
-                </Text>
-                <Text className="mt-1 font-sans text-xs" style={{ color: BLUE_UI.muted }}>
-                  Diga area, atividade ou algo que a foto nao mostra.
-                </Text>
-              </View>
+            <View>
+              <Text className="font-sansSemi text-base" style={{ color: BLUE_UI.text }}>
+                Contexto da inspeção
+              </Text>
+              <Text className="mt-1 font-sans text-xs" style={{ color: BLUE_UI.muted }}>
+                Informe área, atividade ou algo importante que a foto não mostra.
+              </Text>
             </View>
             <TextInput
               value={inspectorNote}
               onChangeText={setInspectorNote}
-              placeholder="Ex.: britagem; turno da manha; possivel falta de EPI..."
+              placeholder="Ex.: britagem; turno da manhã; possível falta de EPI..."
               placeholderTextColor={BLUE_UI.muted}
               multiline
               textAlignVertical="top"
@@ -830,16 +1001,14 @@ export function AnalysisScreen() {
               </View>
               <View className="flex-1">
                 <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                  Gerar relatorio fotografico
+                  Gerar relatório fotográfico
                 </Text>
                 <Caption className="mt-1" style={{ color: BLUE_UI.muted }}>
-                  Segue o modelo da inspecao: identificacao, descricao do risco e acoes.
+                  Segue o modelo da inspeção: identificação, descrição do risco e ações.
                 </Caption>
               </View>
             </Pressable>
           </View>
-
-          <Button label="Limpar e recomecar" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
       {step === 'analyzing' ? (
@@ -849,8 +1018,8 @@ export function AnalysisScreen() {
             <Label className="mt-5">{analyzingLabel}</Label>
             <Caption className="mt-2 text-center">
               {queueProgress.total > 1
-                ? 'Processando o lote com seguranÃ§a, uma situaÃ§Ã£o por vez.'
-                : 'Identificando riscos, controles, NRs e pontos de dÃºvida.'}
+                ? 'Processando o lote com segurança, uma situação por vez.'
+                : 'Identificando riscos, controles, NRs e pontos de dúvida.'}
             </Caption>
           </Surface>
 
@@ -915,32 +1084,30 @@ export function AnalysisScreen() {
           result.inspectorGuidance ||
           (result.limitations && result.limitations.length > 0) ? (
             <Surface tone="signal">
-              <Label>AtenÃ§Ã£o do inspetor</Label>
+              <Label>Atenção do inspetor</Label>
               {result.overallConfidence ? (
                 <Caption className="mt-2">
-                  RevisÃ£o recomendada pelo Alpha Wolf
+                  Revisão recomendada pelo Alpha Wolf
                 </Caption>
               ) : null}
               {result.inspectorGuidance ? (
                 <Body className="mt-2">{result.inspectorGuidance}</Body>
               ) : (
                 <Body className="mt-2">
-                  A IA sinalizou dÃºvida ou limitaÃ§Ã£o. Complemente com uma mensagem e reanalise.
+                  A IA sinalizou dúvida ou limitação. Complemente com uma mensagem e reanalise.
                 </Body>
               )}
               {result.limitations?.map((item) => (
                 <Caption key={item} className="mt-1">
-                  â€¢ {item}
+                  • {item}
                 </Caption>
               ))}
             </Surface>
-          ) : (
-            null
-          )}
+          ) : null}
 
           {lastInspectorNote ? (
             <Surface tone="elevated">
-              <Caption className="font-sansSemi">Contexto usado nesta anÃ¡lise</Caption>
+              <Caption className="font-sansSemi">Contexto usado nesta análise</Caption>
               <Body className="mt-2">{lastInspectorNote}</Body>
             </Surface>
           ) : null}
@@ -952,11 +1119,11 @@ export function AnalysisScreen() {
                 {result.risks.map((risk) => (
                   <View key={risk.id} className="gap-1">
                     <Label>
-                      {risk.title} Â· {SEVERITY_LABEL[risk.severity]}
+                      {risk.title} · {SEVERITY_LABEL[risk.severity]}
                     </Label>
                     <Caption>{risk.description}</Caption>
                     {risk.evidence?.map((item) => (
-                      <Caption key={item}>Evid?ncia: {item}</Caption>
+                      <Caption key={item}>Evidência: {item}</Caption>
                     ))}
                     {risk.uncertaintyNote ? (
                       <Caption style={{ color: colors.signal }}>
@@ -967,8 +1134,8 @@ export function AnalysisScreen() {
                 ))}
               </View>
             </Surface>
-
           ) : null}
+
           {result.controls.length > 0 ? (
             <Surface>
               <Label>Medidas de controle</Label>
@@ -987,20 +1154,45 @@ export function AnalysisScreen() {
                 })}
               </View>
             </Surface>
-
           ) : null}
+
           {result.nrs.length > 0 ? (
             <Surface>
               <Label>NRs relacionadas</Label>
               <View className="mt-4 gap-3">
-                {result.nrs.map((nr, index) => (
-                  <View key={`${nr.code}-${index}`} className="gap-1">
-                    <Label>
-                      {nr.code} â€” {nr.title}
-                    </Label>
-                    <Caption>{nr.relevance}</Caption>
-                  </View>
-                ))}
+                {result.nrs.map((nr, index) => {
+                  const catalogNr = getNrByCode(nr.code);
+                  return (
+                    <Pressable
+                      accessibilityRole={catalogNr ? 'button' : undefined}
+                      key={`${nr.code}-${index}`}
+                      className="rounded-2xl px-3 py-3"
+                      style={{
+                        backgroundColor: colors.canvasElev,
+                        borderWidth: 1,
+                        borderColor: colors.line,
+                      }}
+                      onPress={
+                        catalogNr
+                          ? () =>
+                              router.push(
+                                `/(app)/library/nrs/${catalogNr.code.toLowerCase()}` as Href,
+                              )
+                          : undefined
+                      }
+                    >
+                      <Label>
+                        {nr.code} - {nr.title}
+                      </Label>
+                      <Caption className="mt-1">{nr.relevance}</Caption>
+                      {catalogNr ? (
+                        <Caption className="mt-2" style={{ color: colors.brandDark }}>
+                          Abrir norma completa
+                        </Caption>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
               </View>
             </Surface>
           ) : null}
@@ -1011,14 +1203,14 @@ export function AnalysisScreen() {
 
           {sessionUri ? (
             <Surface>
-              <Label>Reanalisar com informaÃ§Ã£o extra</Label>
+              <Label>Reanalisar esta foto</Label>
               <Caption className="mt-2">
-                Se a IA nÃ£o identificou algo, descreva o contexto e rode de novo com a mesma foto.
+                Use este campo quando faltou contexto ou quando a IA deixou passar algo. A reanálise usa a mesma foto, sem abrir a galeria.
               </Caption>
               <TextInput
                 value={inspectorNote}
                 onChangeText={setInspectorNote}
-                placeholder="Ex.: nÃ£o deu para ver a guarda da correia..."
+                placeholder="Ex.: a proteção da correia está fora do enquadramento..."
                 placeholderTextColor={colors.inkMuted}
                 multiline
                 textAlignVertical="top"
@@ -1030,8 +1222,9 @@ export function AnalysisScreen() {
                 }}
               />
               <Button
-                label="Reanalisar com esta informaÃ§Ã£o"
-                variant="secondary"
+                label="Reanalisar esta foto"
+                variant="primary"
+                disabled={!inspectorNote.trim()}
                 onPress={handleReanalyzeSingle}
                 className="mt-4"
               />
@@ -1040,24 +1233,24 @@ export function AnalysisScreen() {
 
           {savedId ? (
             <Button
-              label="Ver no histÃ³rico"
+              label="Ver no histórico"
               onPress={() => router.push(`/(app)/history/${savedId}` as Href)}
             />
           ) : null}
-          <Button label="Nova anÃ¡lise" variant="outline" onPress={handleNewAnalysis} />
+          <Button label="Nova análise" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
 
       {step === 'batch_result' ? (
         <View className="gap-4">
           <Surface tone="accent">
-            <Label>Lote concluÃ­do</Label>
+            <Label>Lote concluído</Label>
             <Body className="mt-2">
-              {batchSummary.done} concluÃ­da{batchSummary.done === 1 ? '' : 's'}
+              {batchSummary.done} concluída{batchSummary.done === 1 ? '' : 's'}
               {batchSummary.failed > 0
-                ? ` Â· ${batchSummary.failed} com falha`
+                ? ` · ${batchSummary.failed} com falha`
                 : ''}{' '}
-              de {batchSummary.total}. Cada foto gerou um registro no histÃ³rico.
+              de {batchSummary.total}. Cada foto gerou um registro no histórico.
             </Body>
           </Surface>
 
@@ -1084,7 +1277,7 @@ export function AnalysisScreen() {
                     <Caption style={{ color: colors.brandDark }}>
                       {QUEUE_STATUS_LABEL[item.status]}
                       {item.result?.risks?.length
-                        ? ` Â· ${item.result.risks.length} risco(s)`
+                        ? ` · ${item.result.risks.length} risco(s)`
                         : ''}
                     </Caption>
                     {item.status === 'failed' ? (
@@ -1113,7 +1306,7 @@ export function AnalysisScreen() {
             <Surface>
               <Label>Retentar falhas</Label>
               <Caption className="mt-2">
-                Envie um contexto extra se quiser e rode de novo sÃ³ as fotos que falharam.
+                Envie um contexto extra se quiser e rode de novo só as fotos que falharam.
               </Caption>
               <TextInput
                 value={inspectorNote}
@@ -1139,17 +1332,17 @@ export function AnalysisScreen() {
           ) : null}
 
           <Button
-            label="Ver histÃ³rico"
+            label="Ver histórico"
             onPress={() => router.push('/(app)/history' as Href)}
           />
-          <Button label="Nova anÃ¡lise" variant="outline" onPress={handleNewAnalysis} />
+          <Button label="Nova análise" variant="outline" onPress={handleNewAnalysis} />
         </View>
       ) : null}
 
       {step === 'error' ? (
         <View className="gap-4">
           <Surface tone="signal">
-            <Label>NÃ£o foi possÃ­vel analisar</Label>
+            <Label>Não foi possível analisar</Label>
             <Body className="mt-2">{error ?? 'Tente novamente.'}</Body>
           </Surface>
           {batch.length > 0 ? (
