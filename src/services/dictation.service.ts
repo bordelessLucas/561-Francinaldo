@@ -37,33 +37,33 @@ async function transcribeViaOpenAiDirect(localUri: string): Promise<string> {
   const apiKey = getClientApiKey();
   if (!apiKey) throw new Error('STT_PROVIDER_NOT_READY');
 
-  const form = new FormData();
-  form.append('model', 'gpt-4o-mini-transcribe');
-  form.append('language', 'pt');
-  form.append(
-    'prompt',
-    'Contexto falado por inspetor de SST no Brasil antes de analisar foto de ambiente de trabalho.',
-  );
-  form.append('file', {
-    uri: localUri,
-    name: getFilename(localUri),
-    type: getMimeType(localUri),
-  } as unknown as Blob);
-
-  let res: Response;
+  let upload: FileSystem.FileSystemUploadResult;
   try {
-    res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+    upload = await FileSystem.uploadAsync(
+      'https://api.openai.com/v1/audio/transcriptions',
+      localUri,
+      {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: getMimeType(localUri),
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        parameters: {
+          model: 'gpt-4o-mini-transcribe',
+          language: 'pt',
+          response_format: 'json',
+          prompt:
+            'Contexto falado por inspetor de SST no Brasil antes de analisar foto de ambiente de trabalho.',
+        },
       },
-      body: form,
-    });
+    );
   } catch {
     throw new Error('STT_NETWORK_ERROR');
   }
 
-  const raw = await res.text();
+  const raw = upload.body ?? '';
   let payload: unknown = {};
   try {
     payload = raw ? JSON.parse(raw) : {};
@@ -71,7 +71,7 @@ async function transcribeViaOpenAiDirect(localUri: string): Promise<string> {
     payload = {};
   }
 
-  if (!res.ok) {
+  if (upload.status < 200 || upload.status >= 300) {
     const code =
       payload &&
       typeof payload === 'object' &&

@@ -165,6 +165,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="analysis"
         options={{
+          tabBarStyle: { display: 'none' },
           title: 'Análise',
           tabBarIcon: ({ focused }) => (
             <AnalysisTabIcon focused={focused} brand={colors.brand} brandDark={colors.brandDark} />

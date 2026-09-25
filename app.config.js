@@ -13,6 +13,13 @@ module.exports = () => {
       plugins: [
         ...basePlugins,
         [
+          'expo-camera',
+          {
+            cameraPermission:
+              'Permitir acesso a camera para registrar situacoes de risco dentro do app.',
+          },
+        ],
+        [
           'expo-audio',
           {
             microphonePermission:
