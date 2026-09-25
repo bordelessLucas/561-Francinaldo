@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import {
   RecordingPresets,
   requestRecordingPermissionsAsync,
@@ -16,7 +17,13 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { router, type Href } from 'expo-router';
+import {
+  CameraView,
+  type CameraType,
+  useCameraPermissions,
+} from 'expo-camera';
+import { router, type Href, useNavigation } from 'expo-router';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,7 +38,6 @@ import {
   Body,
   Button,
   Caption,
-  Container,
   InspectionReportCard,
   Label,
   RiskLevelMeter,
@@ -45,13 +51,12 @@ import {
 import { runAnalysisWithoutUpload } from '@/src/services/analysis.service';
 import {
   MAX_ANALYSIS_BATCH,
-  pickFromCamera,
   pickMultipleFromGallery,
   type PickedImage,
 } from '@/src/services/media.service';
 import { transcribeInspectorNote } from '@/src/services/dictation.service';
 
-type Step = 'assistant' | 'idle' | 'preview' | 'analyzing' | 'result' | 'batch_result' | 'error';
+type Step = 'assistant' | 'camera' | 'preview' | 'analyzing' | 'result' | 'batch_result' | 'error';
 
 const MASCOT_IMAGE = require('@/assets/brand/alpha-mascot-transparent.png');
 
@@ -212,12 +217,18 @@ async function waitForRecordingUri(
 export function AnalysisScreen() {
   const { user } = useAuth();
   const { colors } = useAppTheme();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
+  const cameraRef = useRef<CameraView>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [step, setStep] = useState<Step>('assistant');
   const [batch, setBatch] = useState<PickedImage[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [picking, setPicking] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -238,12 +249,18 @@ export function AnalysisScreen() {
   const remainingSlots = MAX_ANALYSIS_BATCH - batch.length;
   const activePhoto = batch[activeIndex] ?? batch[0] ?? null;
   const isRecordingNote = recorderState.isRecording;
+  const recordingSeconds = Math.max(0, Math.round((recorderState.durationMillis ?? 0) / 1000));
+  const recordingLabel = `${String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:${String(recordingSeconds % 60).padStart(2, '0')}`;
 
   const batchSummary = useMemo(() => {
     const done = queueItems.filter((item) => item.status === 'done').length;
     const failed = queueItems.filter((item) => item.status === 'failed').length;
     return { done, failed, total: queueItems.length };
   }, [queueItems]);
+
+  useEffect(() => {
+    navigation.setOptions({ tabBarStyle: { display: 'none' } });
+  }, [navigation]);
 
   const resetSession = useCallback(() => {
     analysisRunIdRef.current += 1;
@@ -256,6 +273,8 @@ export function AnalysisScreen() {
     setGenerateReport(false);
     setDictationError(null);
     setTranscribingAudio(false);
+    setCapturing(false);
+    setCameraFacing('back');
     setLastInspectorNote(null);
     setPreQuestion('');
     setPreAnswer(null);
@@ -317,10 +336,40 @@ export function AnalysisScreen() {
     }
 
     setError(null);
-    setPicking(true);
     try {
-      const next = await pickFromCamera();
-      if (!next) return;
+      const permission =
+        cameraPermission?.granted ? cameraPermission : await requestCameraPermission();
+      if (!permission.granted) {
+        throw new Error('CAMERA_PERMISSION_DENIED');
+      }
+      setStep('camera');
+    } catch (err) {
+      setError(getCaptureErrorMessage(err));
+    }
+  }
+
+  async function handleTakeEmbeddedPhoto() {
+    if (!user) {
+      setError('Faça login para registrar uma análise.');
+      return;
+    }
+    if (remainingSlots <= 0) {
+      setError(`Você pode enviar até ${MAX_ANALYSIS_BATCH} fotos por vez.`);
+      return;
+    }
+
+    setError(null);
+    setCapturing(true);
+    try {
+      const photo = await cameraRef.current?.takePictureAsync({
+        quality: 0.82,
+        exif: false,
+        shutterSound: true,
+      });
+      if (!photo?.uri) {
+        throw new Error('IMAGE_READ_FAILED');
+      }
+      const next: PickedImage = { localUri: photo.uri, source: 'camera' };
       setBatch((prev) => {
         const merged = mergeBatch(prev, [next]);
         setActiveIndex(merged.length - 1);
@@ -333,7 +382,7 @@ export function AnalysisScreen() {
     } catch (err) {
       setError(getCaptureErrorMessage(err));
     } finally {
-      setPicking(false);
+      setCapturing(false);
     }
   }
 
@@ -376,7 +425,7 @@ export function AnalysisScreen() {
         return Math.min(current, next.length - 1);
       });
       if (next.length === 0) {
-        setStep('idle');
+        setStep('camera');
       }
       return next;
     });
@@ -496,7 +545,7 @@ export function AnalysisScreen() {
   async function handleReanalyzeSingle() {
     if (!user || !sessionUri) {
       setError('A foto desta sessão não está mais disponível. Monte um novo lote.');
-      setStep('idle');
+      setStep('camera');
       return;
     }
     if (!inspectorNote.trim()) {
@@ -605,22 +654,184 @@ export function AnalysisScreen() {
       ? `Analisando foto ${Math.min(queueProgress.index + 1, queueProgress.total)} de ${queueProgress.total}`
       : 'Analisando com IA...';
 
+  if (step === 'camera') {
+    return (
+      <View className="flex-1" style={{ backgroundColor: '#02070B' }}>
+        {cameraPermission?.granted ? (
+          <CameraView
+            ref={cameraRef}
+            active
+            animateShutter
+            facing={cameraFacing}
+            mode="picture"
+            style={{ flex: 1 }}
+            onMountError={() => setError('Não foi possível iniciar a câmera neste aparelho.')}
+          >
+            <View
+              className="flex-1 justify-between"
+              style={{
+                paddingTop: Math.max(insets.top, 16),
+                paddingBottom: Math.max(insets.bottom, 18),
+              }}
+            >
+              <View className="flex-row items-center justify-between px-4">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Voltar"
+                  onPress={() => setStep('assistant')}
+                  className="h-11 w-11 items-center justify-center rounded-full"
+                  style={{ backgroundColor: 'rgba(2,7,11,0.72)' }}
+                >
+                  <Ionicons name="chevron-back" size={24} color={BLUE_UI.text} />
+                </Pressable>
+
+                <View className="rounded-full px-3 py-2" style={{ backgroundColor: 'rgba(2,7,11,0.72)' }}>
+                  <Text className="font-sansSemi text-xs" style={{ color: BLUE_UI.text }}>
+                    {batch.length}/{MAX_ANALYSIS_BATCH}
+                  </Text>
+                </View>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Alternar câmera"
+                  onPress={() => setCameraFacing((current) => (current === 'back' ? 'front' : 'back'))}
+                  className="h-11 w-11 items-center justify-center rounded-full"
+                  style={{ backgroundColor: 'rgba(2,7,11,0.72)' }}
+                >
+                  <Ionicons name="camera-reverse-outline" size={23} color={BLUE_UI.text} />
+                </Pressable>
+              </View>
+
+              <View pointerEvents="none" className="absolute inset-x-8 bottom-36 top-24">
+                <View className="absolute left-0 top-0 h-10 w-10 rounded-tl-2xl border-l-2 border-t-2" style={{ borderColor: BLUE_UI.text }} />
+                <View className="absolute right-0 top-0 h-10 w-10 rounded-tr-2xl border-r-2 border-t-2" style={{ borderColor: BLUE_UI.text }} />
+                <View className="absolute bottom-0 left-0 h-10 w-10 rounded-bl-2xl border-b-2 border-l-2" style={{ borderColor: BLUE_UI.text }} />
+                <View className="absolute bottom-0 right-0 h-10 w-10 rounded-br-2xl border-b-2 border-r-2" style={{ borderColor: BLUE_UI.text }} />
+              </View>
+
+              <View className="relative h-28 justify-center px-5">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Escolher foto da galeria"
+                  disabled={picking}
+                  onPress={handleAddFromGallery}
+                  className="absolute left-6 h-14 w-14 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: 'rgba(2,7,11,0.78)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(247,250,252,0.28)',
+                    opacity: picking ? 0.55 : 1,
+                  }}
+                >
+                  {picking ? (
+                    <ActivityIndicator color={BLUE_UI.text} />
+                  ) : (
+                    <Ionicons name="images-outline" size={24} color={BLUE_UI.text} />
+                  )}
+                </Pressable>
+
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Tirar foto"
+                  disabled={capturing}
+                  onPress={handleTakeEmbeddedPhoto}
+                  className="self-center h-20 w-20 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: 'rgba(247,250,252,0.18)',
+                    borderWidth: 4,
+                    borderColor: BLUE_UI.text,
+                    opacity: capturing ? 0.65 : 1,
+                  }}
+                >
+                  {capturing ? (
+                    <ActivityIndicator color={BLUE_UI.text} />
+                  ) : (
+                    <View className="h-14 w-14 rounded-full" style={{ backgroundColor: BLUE_UI.text }} />
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </CameraView>
+        ) : (
+          <View
+            className="flex-1 items-center justify-center px-6"
+            style={{
+              paddingTop: Math.max(insets.top, 20),
+              paddingBottom: Math.max(insets.bottom, 24),
+            }}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+              onPress={handleLeaveFlow}
+              className="absolute left-4 h-11 w-11 items-center justify-center rounded-full"
+              style={{ top: Math.max(insets.top, 16), backgroundColor: 'rgba(2,7,11,0.72)' }}
+            >
+              <Ionicons name="chevron-back" size={24} color={BLUE_UI.text} />
+            </Pressable>
+            <Ionicons name="camera" size={64} color={BLUE_UI.text} />
+            <Text className="mt-6 text-center font-sansSemi text-2xl" style={{ color: BLUE_UI.text }}>
+              Permita a câmera
+            </Text>
+            <Text className="mt-3 text-center font-sans text-sm leading-6" style={{ color: BLUE_UI.muted }}>
+              A foto acontece dentro do app, com preview antes da análise.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleAddFromCamera}
+              className="mt-6 h-14 w-14 items-center justify-center rounded-full"
+              style={{ backgroundColor: BLUE_UI.blue }}
+            >
+              <Ionicons name="camera" size={24} color={BLUE_UI.text} />
+            </Pressable>
+          </View>
+        )}
+
+        {error ? (
+          <View
+            className="absolute left-4 right-4 rounded-2xl px-4 py-3"
+            style={{
+              bottom: Math.max(insets.bottom, 18) + 116,
+              backgroundColor: 'rgba(70,20,20,0.88)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,180,171,0.4)',
+            }}
+          >
+            <Text className="font-sans text-sm" style={{ color: '#FFDED8' }}>
+              {error}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
   return (
-    <Container scroll>
-      {step !== 'assistant' ? (
-        <BackLink
-          className="mb-2 mt-2"
-          label={step === 'analyzing' ? 'Cancelar' : 'Voltar'}
-          fallbackHref={'/(app)/' as Href}
-          onPress={handleLeaveFlow}
-        />
-      ) : null}
+    <View className="flex-1" style={{ backgroundColor: BLUE_UI.bg }}>
+      <StatusBar style="light" />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: 16,
+            paddingBottom: Math.max(insets.bottom, 24),
+          }}
+        >
+      <BackLink
+        className="mb-2 mt-2"
+        label={step === 'analyzing' ? 'Cancelar' : 'Voltar'}
+        fallbackHref={'/(app)/' as Href}
+        onPress={handleLeaveFlow}
+      />
 
       {step === 'assistant' ? (
-        <View className="flex-1 gap-4" style={{ flexGrow: 1 }}>
+        <View className="gap-4">
           <View
-            className="flex-1 justify-between gap-6 rounded-[28px] px-5 py-5"
-            style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
+            className="gap-6 px-0 py-1"
+            style={{ backgroundColor: BLUE_UI.bg }}
           >
             <View className="gap-5">
               <View className="flex-row items-start gap-4">
@@ -696,7 +907,7 @@ export function AnalysisScreen() {
                 disabled={picking}
                 onPress={() => {
                   setError(null);
-                  setStep('idle');
+                  handleAddFromCamera();
                 }}
                 className="min-h-16 flex-row items-center justify-center gap-3 rounded-2xl px-5"
                 style={{ backgroundColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
@@ -723,73 +934,10 @@ export function AnalysisScreen() {
         </View>
       ) : null}
 
-      {step === 'idle' ? (
-        <View
-          className="flex-1 justify-between rounded-[28px] px-5 py-5"
-          style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
-        >
-          <View className="flex-row items-center justify-between">
-            <View>
-              <Text className="font-sansSemi text-sm uppercase" style={{ color: BLUE_UI.muted }}>
-                SST Alerta
-              </Text>
-              <Text className="mt-1 font-sansSemi text-xl" style={{ color: BLUE_UI.text }}>
-                Registrar situação
-              </Text>
-            </View>
-            <Image source={MASCOT_IMAGE} className="h-16 w-14" resizeMode="contain" />
-          </View>
-
-          <View
-            className="my-6 flex-1 items-center justify-center rounded-[28px] border px-6"
-            style={{ backgroundColor: BLUE_UI.panel, borderColor: BLUE_UI.border }}
-          >
-            <View
-              className="h-40 w-40 items-center justify-center rounded-full border"
-              style={{ backgroundColor: BLUE_UI.panelSoft, borderColor: BLUE_UI.border }}
-            >
-              <Ionicons name="camera" size={64} color={BLUE_UI.text} />
-            </View>
-            <Text className="mt-8 text-center font-sansSemi text-2xl" style={{ color: BLUE_UI.text }}>
-              Câmera pronta
-            </Text>
-            <Text className="mt-3 text-center font-sans text-sm leading-6" style={{ color: BLUE_UI.muted }}>
-              Tire uma foto agora ou escolha imagens da galeria antes de começar a análise.
-            </Text>
-          </View>
-
-          <View className="gap-4">
-            <Pressable
-              accessibilityRole="button"
-              disabled={picking}
-              onPress={handleAddFromCamera}
-              className="min-h-16 flex-row items-center justify-center gap-3 rounded-2xl px-5"
-              style={{ backgroundColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
-            >
-              {picking ? <ActivityIndicator color={BLUE_UI.text} /> : <Ionicons name="camera" size={24} color={BLUE_UI.text} />}
-              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                Tirar foto
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              disabled={picking}
-              onPress={handleAddFromGallery}
-              className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl border px-5"
-              style={{ borderColor: BLUE_UI.blue, opacity: picking ? 0.6 : 1 }}
-            >
-              <Ionicons name="images-outline" size={20} color={BLUE_UI.text} />
-              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                Escolher fotos da galeria
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
       {step === 'preview' && batch.length > 0 ? (
         <View
-          className="-mx-3 gap-4 rounded-[28px] px-3 py-4"
-          style={{ backgroundColor: BLUE_UI.bg, borderWidth: 1, borderColor: BLUE_UI.border }}
+          className="gap-4 px-0 py-1"
+          style={{ backgroundColor: BLUE_UI.bg }}
         >
           <View className="flex-row items-center justify-between px-1">
             <View>
@@ -799,10 +947,6 @@ export function AnalysisScreen() {
               <Text className="mt-2 font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
                 ANALISE DE RISCO POR IA
               </Text>
-            </View>
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="person-outline" size={20} color={BLUE_UI.text} />
-              <Ionicons name="menu" size={24} color={BLUE_UI.text} />
             </View>
           </View>
 
@@ -836,17 +980,6 @@ export function AnalysisScreen() {
             </View>
 
             <View className="px-4 pb-4 pt-3">
-              <Pressable
-                accessibilityRole="button"
-                onPress={handleConfirmBatch}
-                className="min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
-                style={{ backgroundColor: BLUE_UI.blue }}
-              >
-                <Ionicons name="camera" size={20} color={BLUE_UI.text} />
-                <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                  {batch.length === 1 ? 'Analisar esta foto' : `Analisar ${batch.length} fotos`}
-                </Text>
-              </Pressable>
               <Caption className="mt-3 text-center" style={{ color: BLUE_UI.muted }}>
                 Contexto e relatório são opcionais antes de analisar.
               </Caption>
@@ -971,12 +1104,12 @@ export function AnalysisScreen() {
                 <Ionicons name={isRecordingNote ? 'stop-circle' : 'mic'} size={20} color={BLUE_UI.text} />
               )}
               <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
-                {isRecordingNote ? 'PARAR E TRANSCREVER' : transcribingAudio ? 'TRANSCREVENDO AUDIO...' : 'FALAR CONTEXTO'}
+                {isRecordingNote ? `PARAR E TRANSCREVER ${recordingLabel}` : transcribingAudio ? 'TRANSCREVENDO AUDIO...' : 'FALAR POR VOZ'}
               </Text>
             </Pressable>
             {isRecordingNote ? (
               <Caption className="mt-2" style={{ color: BLUE_UI.warning }}>
-                Gravando... toque para parar e inserir o texto no contexto.
+                Gravando {recordingLabel}. Toque para parar; a transcrição entra no contexto.
               </Caption>
             ) : null}
             {dictationError ? (
@@ -1008,12 +1141,28 @@ export function AnalysisScreen() {
                 </Caption>
               </View>
             </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Analisar foto com contexto"
+              disabled={transcribingAudio || isRecordingNote}
+              onPress={handleConfirmBatch}
+              className="mt-5 min-h-14 flex-row items-center justify-center gap-2 rounded-2xl px-5"
+              style={{
+                backgroundColor: BLUE_UI.blue,
+                opacity: transcribingAudio || isRecordingNote ? 0.55 : 1,
+              }}
+            >
+              <Ionicons name="sparkles" size={20} color={BLUE_UI.text} />
+              <Text className="font-sansSemi text-sm" style={{ color: BLUE_UI.text }}>
+                {batch.length === 1 ? 'Analisar foto com contexto' : `Analisar ${batch.length} fotos com contexto`}
+              </Text>
+            </Pressable>
           </View>
         </View>
       ) : null}
       {step === 'analyzing' ? (
         <View className="gap-4">
-          <Surface className="items-center py-8">
+          <Surface bordered={false} className="items-center py-8">
             <ActivityIndicator size="large" color={colors.brand} />
             <Label className="mt-5">{analyzingLabel}</Label>
             <Caption className="mt-2 text-center">
@@ -1024,7 +1173,7 @@ export function AnalysisScreen() {
           </Surface>
 
           {queueItems.length > 0 ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>Progresso do lote</Label>
               <View className="mt-4 gap-3">
                 {queueItems.map((item, index) => (
@@ -1064,7 +1213,7 @@ export function AnalysisScreen() {
           ) : null}
 
           {result.risks.length > 0 || result.inspectionReport ? (
-            <Surface>
+            <Surface bordered={false}>
               <RiskLevelMeter
                 risks={result.risks}
                 fallbackSeverity={result.inspectionReport?.severity}
@@ -1072,7 +1221,7 @@ export function AnalysisScreen() {
             </Surface>
           ) : null}
 
-          <Surface tone={result.risks.length > 0 ? 'elevated' : 'accent'}>
+          <Surface bordered={false} tone={result.risks.length > 0 ? 'elevated' : 'accent'}>
             <Label>{getComplianceTitle(result)}</Label>
             <Body className="mt-2">{getComplianceBody(result)}</Body>
             {result.sceneType ? (
@@ -1083,7 +1232,7 @@ export function AnalysisScreen() {
           {result.needsInspectorReview ||
           result.inspectorGuidance ||
           (result.limitations && result.limitations.length > 0) ? (
-            <Surface tone="signal">
+            <Surface bordered={false} tone="signal">
               <Label>Atenção do inspetor</Label>
               {result.overallConfidence ? (
                 <Caption className="mt-2">
@@ -1106,14 +1255,14 @@ export function AnalysisScreen() {
           ) : null}
 
           {lastInspectorNote ? (
-            <Surface tone="elevated">
+            <Surface bordered={false} tone="elevated">
               <Caption className="font-sansSemi">Contexto usado nesta análise</Caption>
               <Body className="mt-2">{lastInspectorNote}</Body>
             </Surface>
           ) : null}
 
           {result.risks.length > 0 ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>Riscos identificados</Label>
               <View className="mt-4 gap-4">
                 {result.risks.map((risk) => (
@@ -1137,7 +1286,7 @@ export function AnalysisScreen() {
           ) : null}
 
           {result.controls.length > 0 ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>Medidas de controle</Label>
               <View className="mt-4 gap-3">
                 {result.controls.map((control, index) => {
@@ -1157,7 +1306,7 @@ export function AnalysisScreen() {
           ) : null}
 
           {result.nrs.length > 0 ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>NRs relacionadas</Label>
               <View className="mt-4 gap-3">
                 {result.nrs.map((nr, index) => {
@@ -1202,7 +1351,7 @@ export function AnalysisScreen() {
           ) : null}
 
           {sessionUri ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>Reanalisar esta foto</Label>
               <Caption className="mt-2">
                 Use este campo quando faltou contexto ou quando a IA deixou passar algo. A reanálise usa a mesma foto, sem abrir a galeria.
@@ -1243,7 +1392,7 @@ export function AnalysisScreen() {
 
       {step === 'batch_result' ? (
         <View className="gap-4">
-          <Surface tone="accent">
+          <Surface bordered={false} tone="accent">
             <Label>Lote concluído</Label>
             <Body className="mt-2">
               {batchSummary.done} concluída{batchSummary.done === 1 ? '' : 's'}
@@ -1254,7 +1403,7 @@ export function AnalysisScreen() {
             </Body>
           </Surface>
 
-          <Surface>
+          <Surface bordered={false}>
             <Label>Resultados por foto</Label>
             <View className="mt-4 gap-3">
               {queueItems.map((item, index) => (
@@ -1303,7 +1452,7 @@ export function AnalysisScreen() {
           </Surface>
 
           {batchSummary.failed > 0 ? (
-            <Surface>
+            <Surface bordered={false}>
               <Label>Retentar falhas</Label>
               <Caption className="mt-2">
                 Envie um contexto extra se quiser e rode de novo só as fotos que falharam.
@@ -1341,7 +1490,7 @@ export function AnalysisScreen() {
 
       {step === 'error' ? (
         <View className="gap-4">
-          <Surface tone="signal">
+          <Surface bordered={false} tone="signal">
             <Label>Não foi possível analisar</Label>
             <Body className="mt-2">{error ?? 'Tente novamente.'}</Body>
           </Surface>
@@ -1353,10 +1502,12 @@ export function AnalysisScreen() {
       ) : null}
 
       {error && step !== 'error' ? (
-        <Surface tone="signal" className="mt-5">
+        <Surface bordered={false} tone="signal" className="mt-5">
           <Caption style={{ color: colors.inkSoft }}>{error}</Caption>
         </Surface>
       ) : null}
-    </Container>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
